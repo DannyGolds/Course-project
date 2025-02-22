@@ -7,6 +7,10 @@
 #include "Security.h"
 #include "SecurityDlg.h"
 #include "afxdialogex.h"
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -66,6 +70,8 @@ BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_NOTIFY(NM_CUSTOMDRAW, IDC_PROGRESS1, &CSecurityDlg::OnNMCustomdrawProgress1)
+	ON_EN_CHANGE(IDC_EDIT2, &CSecurityDlg::OnEnChangeEdit2)
+	ON_COMMAND(ID_Open, &CSecurityDlg::OnOpen)
 END_MESSAGE_MAP()
 
 
@@ -161,3 +167,45 @@ void CSecurityDlg::OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult)
 	// TODO: добавьте свой код обработчика уведомлений
 	*pResult = 0;
 }
+
+void CSecurityDlg::OnEnChangeEdit2()
+{
+	// TODO:  Если это элемент управления RICHEDIT, то элемент управления не будет
+	// send this notification unless you override the CDialogEx::OnInitDialog()
+	// функция и вызов CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+
+	// TODO:  Добавьте код элемента управления
+}
+
+//Function templates 
+template<typename T>
+void readFile(std::vector<CString>&, T&);
+
+//EOF Function templates
+
+void CSecurityDlg::OnOpen()
+{
+	CFileDialog fileDialog(TRUE, NULL, L"*.txt;*.log;*.xml;*.csv");
+	int res = fileDialog.DoModal();
+	std::vector<CString> logs;
+	std::ifstream file(fileDialog.GetPathName());
+	readFile(logs, file);
+	AfxMessageBox(logs[1], MB_ICONINFORMATION);
+}
+
+
+
+
+//Start of support functions
+template<typename T>
+void readFile(std::vector<CString>& logs, T& file) {
+	while (!file.eof()) {
+		std::string log;
+		getline(file, log);
+		CString log_c(log.c_str());
+		logs.push_back(log_c);
+	}
+}
+
+//End of support functions
