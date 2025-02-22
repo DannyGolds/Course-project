@@ -57,7 +57,7 @@ END_MESSAGE_MAP()
 CSecurityDlg::CSecurityDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_SECURITY_DIALOG, pParent)
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 }
 
 void CSecurityDlg::DoDataExchange(CDataExchange* pDX)
@@ -184,11 +184,14 @@ void readFile(std::vector<CString>&, T&);
 
 //EOF Function templates
 
+
+//Global variables
+std::vector<CString> logs;
+//
 void CSecurityDlg::OnOpen()
 {
 	CFileDialog fileDialog(TRUE, NULL, L"*.txt;*.log;*.xml;*.csv");
 	int res = fileDialog.DoModal();
-	std::vector<CString> logs;
 	std::ifstream file(fileDialog.GetPathName());
 	readFile(logs, file);
 	AfxMessageBox(logs[1], MB_ICONINFORMATION);

@@ -208,7 +208,8 @@
     <None Include="res\Security.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\Security.ico" />
+    <Image Include="D:\Security.ico" />
+    <Image Include="res\icon1.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
