@@ -213,6 +213,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\Downloads\Security.ico" />
+    <Image Include="res\Security.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

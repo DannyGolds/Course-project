@@ -60,8 +60,8 @@ BOOL CInfoList::OnInitDialog()
     main_list.InsertColumn(0, _T("Время события"), LVCFMT_LEFT, col1Width);
     main_list.InsertColumn(1, _T("Уровень важности"), LVCFMT_LEFT, col2Width + 25);
     main_list.InsertColumn(2, _T("Процесс"), LVCFMT_LEFT, col3Width - 25);
-    main_list.InsertColumn(2, _T("Сообщение"), LVCFMT_LEFT, col4Width);
-    main_list.InsertColumn(2, _T("Детали"), LVCFMT_LEFT, col5Width);
+    main_list.InsertColumn(3, _T("Сообщение"), LVCFMT_LEFT, col4Width);
+    main_list.InsertColumn(4, _T("Детали"), LVCFMT_LEFT, col5Width);
 
     return bResult; // Возвращаем сохраненное значение
 }

@@ -8,6 +8,7 @@
 #include "SecurityDlg.h"
 #include "afxdialogex.h"
 #include "CInfoList.h"
+#include "LogStructure.h"
 
 #include <fstream>
 #include <iostream>
@@ -85,6 +86,7 @@ END_MESSAGE_MAP()
 
 BOOL CSecurityDlg::OnInitDialog()
 {
+	setlocale(LC_ALL, "RU");
 	CDialogEx::OnInitDialog();
 	CFont LogFont;
 	LogFont.CreateFontW(16, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 0, 0, 0, DEFAULT_PITCH | FF_SWISS, _T("Montserrat"));
@@ -191,20 +193,20 @@ void CSecurityDlg::OnEnChangeEdit2()
 template<typename T>
 void readFile(std::vector<CString>&, T&);
 
-//EOF Function templates
+//End of Function templates
 
 
 //Global variables
-std::vector<CString> logs;
+std::vector<LogEntry> logs;
 //
 void CSecurityDlg::OnOpen()
 {
 	CFileDialog fileDialog(TRUE, NULL, L"*.txt;*.log;*.xml;*.csv");
 	fileDialog.DoModal();
 	auto logPath = fileDialog.GetPathName();
+	CStdioFile file;
+	file.Open(logPath, CFile::modeRead);
 	show_log.SetWindowTextW(logPath);
-	std::ifstream file(logPath);
-	readFile(logs, file);
 }
 
 void CSecurityDlg::OnSaveAs()
@@ -212,8 +214,10 @@ void CSecurityDlg::OnSaveAs()
 	CFileDialog fileDialog(FALSE, NULL, L"Конфигурация системы.log");
 	fileDialog.DoModal();
 	auto logToSave = fileDialog.GetPathName();
-	std::ofstream fileToSave(logToSave);
-	fileToSave << "Логи загружены!";
+	CStdioFile fileToSave;
+	fileToSave.Open(logToSave, CFile::modeWrite);
+	CString data = _T("Логи загружены!");
+	fileToSave.Write(data, data.GetLength() * sizeof(TCHAR));
 }
 
 
@@ -231,11 +235,11 @@ void CSecurityDlg::OnFullCheck()
 //Start of support functions
 template<typename T>
 void readFile(std::vector<CString>& logs, T& file) {
-	while (!file.eof()) {
-		std::string log;
-		getline(file, log);
-		CString log_c(log.c_str());
-		logs.push_back(log_c);
+	CString line;
+	while (file.ReadString(line)) {
+
+		logs.push_back(line);
+		line = "";
 	}
 }
 
