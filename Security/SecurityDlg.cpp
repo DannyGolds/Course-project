@@ -7,6 +7,8 @@
 #include "Security.h"
 #include "SecurityDlg.h"
 #include "afxdialogex.h"
+#include "CInfoList.h"
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -63,6 +65,7 @@ CSecurityDlg::CSecurityDlg(CWnd* pParent /*=nullptr*/)
 void CSecurityDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_EDIT1, show_log);
 }
 
 BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
@@ -72,6 +75,9 @@ BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
 	ON_NOTIFY(NM_CUSTOMDRAW, IDC_PROGRESS1, &CSecurityDlg::OnNMCustomdrawProgress1)
 	ON_EN_CHANGE(IDC_EDIT2, &CSecurityDlg::OnEnChangeEdit2)
 	ON_COMMAND(ID_Open, &CSecurityDlg::OnOpen)
+	ON_BN_CLICKED(IDC_BUTTON1, &CSecurityDlg::OnApplyFilter)
+	ON_BN_CLICKED(IDC_BUTTON3, &CSecurityDlg::OnFullCheck)
+	ON_COMMAND(ID_32775, &CSecurityDlg::OnSaveAs)
 END_MESSAGE_MAP()
 
 
@@ -80,7 +86,10 @@ END_MESSAGE_MAP()
 BOOL CSecurityDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
-
+	CFont LogFont;
+	LogFont.CreateFontW(16, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 0, 0, 0, DEFAULT_PITCH | FF_SWISS, _T("Montserrat"));
+	show_log.SetFont(&LogFont);
+	show_log.SetWindowTextW(_T("Файл не выбран."));
 	// Добавление пункта "О программе..." в системное меню.
 
 	// IDM_ABOUTBOX должен быть в пределах системной команды.
@@ -191,14 +200,33 @@ std::vector<CString> logs;
 void CSecurityDlg::OnOpen()
 {
 	CFileDialog fileDialog(TRUE, NULL, L"*.txt;*.log;*.xml;*.csv");
-	int res = fileDialog.DoModal();
-	std::ifstream file(fileDialog.GetPathName());
+	fileDialog.DoModal();
+	auto logPath = fileDialog.GetPathName();
+	show_log.SetWindowTextW(logPath);
+	std::ifstream file(logPath);
 	readFile(logs, file);
-	AfxMessageBox(logs[1], MB_ICONINFORMATION);
+}
+
+void CSecurityDlg::OnSaveAs()
+{
+	CFileDialog fileDialog(FALSE, NULL, L"Конфигурация системы.log");
+	fileDialog.DoModal();
+	auto logToSave = fileDialog.GetPathName();
+	std::ofstream fileToSave(logToSave);
+	fileToSave << "Логи загружены!";
 }
 
 
+void CSecurityDlg::OnApplyFilter()
+{
+	
+}
 
+void CSecurityDlg::OnFullCheck()
+{
+	CInfoList InfoList;
+	InfoList.DoModal();
+}
 
 //Start of support functions
 template<typename T>

@@ -35,4 +35,9 @@ public:
 	afx_msg void OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnEnChangeEdit2();
 	afx_msg void OnOpen();
+	afx_msg void OnApplyFilter();
+	afx_msg void OnFullCheck();
+	CEdit show_log;
+	afx_msg void OnSaveAs();
+	afx_msg void OnBnClickedButton3();
 };
