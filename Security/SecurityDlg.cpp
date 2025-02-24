@@ -191,8 +191,7 @@ void CSecurityDlg::OnEnChangeEdit2()
 
 //Function templates 
 template<typename T>
-void readFile(std::vector<CString>&, T&);
-
+void readFile(T& file, std::vector<LogEntry>& logs);
 //End of Function templates
 
 
@@ -202,22 +201,42 @@ std::vector<LogEntry> logs;
 void CSecurityDlg::OnOpen()
 {
 	CFileDialog fileDialog(TRUE, NULL, L"*.txt;*.log;*.xml;*.csv");
-	fileDialog.DoModal();
-	auto logPath = fileDialog.GetPathName();
-	CStdioFile file;
-	file.Open(logPath, CFile::modeRead);
-	show_log.SetWindowTextW(logPath);
+	if (fileDialog.DoModal() == IDOK)
+	{
+		auto logPath = fileDialog.GetPathName();
+		CStdioFile file;
+		if (file.Open(logPath, CFile::modeRead)) // Проверка открытия файла
+		{
+			show_log.SetWindowTextW(logPath);
+			logs.clear(); // Очищаем вектор перед чтением
+			readFile(file, logs); //Вызов шаблонной функции
+			file.Close(); // Закрываем файл после использования
+		}
+		else
+		{
+			AfxMessageBox(_T("Не удалось открыть файл!"));
+		}
+	}
 }
 
 void CSecurityDlg::OnSaveAs()
 {
 	CFileDialog fileDialog(FALSE, NULL, L"Конфигурация системы.log");
-	fileDialog.DoModal();
-	auto logToSave = fileDialog.GetPathName();
-	CStdioFile fileToSave;
-	fileToSave.Open(logToSave, CFile::modeWrite);
-	CString data = _T("Логи загружены!");
-	fileToSave.Write(data, data.GetLength() * sizeof(TCHAR));
+	if (fileDialog.DoModal() == IDOK)
+	{
+		auto logToSave = fileDialog.GetPathName();
+		CStdioFile fileToSave;
+		if (fileToSave.Open(logToSave, CFile::modeCreate | CFile::modeWrite)) //Проверка открытия
+		{
+			CString data = _T("Логи загружены!\r\n"); // Добавляем перевод строки
+			fileToSave.Write(data, data.GetLength() * sizeof(TCHAR));
+			fileToSave.Close();
+		}
+		else
+		{
+			AfxMessageBox(_T("Не удалось создать файл для сохранения!"));
+		}
+	}
 }
 
 
@@ -229,18 +248,38 @@ void CSecurityDlg::OnApplyFilter()
 void CSecurityDlg::OnFullCheck()
 {
 	CInfoList InfoList;
+	InfoList.SetLogs(logs);
 	InfoList.DoModal();
 }
 
 //Start of support functions
-template<typename T>
-void readFile(std::vector<CString>& logs, T& file) {
-	CString line;
-	while (file.ReadString(line)) {
 
-		logs.push_back(line);
-		line = "";
+// Start of support functions
+template<typename T>
+void readFile(T& file, std::vector<LogEntry>& logs)
+{
+	CString line;
+	while (file.ReadString(line))
+	{
+		CStringArray tokens;
+		CString token;
+		int iStart = 0;
+
+		while ((token = line.Tokenize(_T(","), iStart)) != _T(""))
+		{
+			tokens.Add(token);
+		}
+
+		// Создаем LogEntry только если у нас достаточно токенов (минимум 5)
+		if (tokens.GetSize() >= 5)
+		{
+			LogEntry logEntry(tokens[0], tokens[1], tokens[2], tokens[3], tokens[4]);
+			logs.push_back(logEntry);
+		}
+		else
+		{
+			TRACE(_T("Строка пропущена из-за недостаточного количества токенов: %s\n"), line);
+		}
 	}
 }
-
 //End of support functions

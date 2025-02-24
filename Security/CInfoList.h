@@ -1,6 +1,9 @@
 ﻿// CInfoList.h
 #pragma once
 #include "afxdialogex.h"
+#include "SecurityDlg.h"
+#include "LogStructure.h"
+#include <vector>
 
 // Диалоговое окно CInfoList
 
@@ -23,6 +26,8 @@ protected:
 public:
     CListCtrl main_list;
     afx_msg void OnLvnItemchangedList3(NMHDR* pNMHDR, LRESULT* pResult);
+    std::vector<LogEntry> m_logs;
+    void SetLogs(const std::vector<LogEntry>& logs);
     CString error_count;
     CString warning_count;
     CString system_state;

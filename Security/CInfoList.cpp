@@ -1,10 +1,10 @@
-﻿// CInfoList.cpp: файл реализации
-//
-
+﻿// CInfoList.cpp
 #include "pch.h"
-#include "Security.h"
+#include "Security.h" //  Замените на имя вашего проекта
 #include "afxdialogex.h"
 #include "CInfoList.h"
+
+#pragma execution_character_set("utf-8")
 
 // Диалоговое окно CInfoList
 
@@ -25,7 +25,7 @@ CInfoList::~CInfoList()
 void CInfoList::DoDataExchange(CDataExchange* pDX)
 {
     CDialogEx::DoDataExchange(pDX);
-    DDX_Control(pDX, IDC_LIST3, main_list);
+    DDX_Control(pDX, IDC_LIST3, main_list); // Используем main_list
     DDX_Text(pDX, IDC_EDIT1, error_count);
     DDX_Text(pDX, IDC_EDIT2, warning_count);
     DDX_Text(pDX, IDC_EDIT3, system_state);
@@ -36,35 +36,39 @@ BEGIN_MESSAGE_MAP(CInfoList, CDialogEx)
 END_MESSAGE_MAP()
 
 // Обработчики сообщений CInfoList
+void CInfoList::SetLogs(const std::vector<LogEntry>& logs)
+{
+    m_logs = logs;
+}
 
 BOOL CInfoList::OnInitDialog()
 {
-    BOOL bResult = CDialogEx::OnInitDialog(); // Сохраняем возвращаемое значение
-
-    // ВАЖНО: Устанавливаем расширенные стили для отображения сетки и выделения всей строки
+    CDialogEx::OnInitDialog();
+    CFont font;
+    font.CreateFont(14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, _T("Calibri"));
+    // Настройка ListCtrl
     main_list.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
-    // Получаем ширину List Control (используем client rect)
-    CRect rect;
-    main_list.GetClientRect(&rect);
-    int width = rect.Width();
+    main_list.InsertColumn(0, _T("Timestamp"), LVCFMT_LEFT, 150);
+    main_list.InsertColumn(1, _T("Level"), LVCFMT_LEFT, 80);
+    main_list.InsertColumn(2, _T("Process"), LVCFMT_LEFT, 120);
+    main_list.InsertColumn(3, _T("Message"), LVCFMT_LEFT, 250);
+    main_list.InsertColumn(4, _T("Details"), LVCFMT_LEFT, 300);
 
-    // Рассчитываем ширину столбцов
-    int col1Width = width / 5;
-    int col2Width = width / 5;
-    int col3Width = width / 5;
-    int col4Width = width / 5;
-    int col5Width = width - col1Width - col2Width - col3Width - col4Width; // Компенсируем округление
+    for (size_t i = 0; i < m_logs.size(); ++i)
+    {
+        const LogEntry& logEntry = m_logs[i];
 
-    // Добавляем столбцы
-    main_list.InsertColumn(0, _T("Время события"), LVCFMT_LEFT, col1Width);
-    main_list.InsertColumn(1, _T("Уровень важности"), LVCFMT_LEFT, col2Width + 25);
-    main_list.InsertColumn(2, _T("Процесс"), LVCFMT_LEFT, col3Width - 25);
-    main_list.InsertColumn(3, _T("Сообщение"), LVCFMT_LEFT, col4Width);
-    main_list.InsertColumn(4, _T("Детали"), LVCFMT_LEFT, col5Width);
+        int nItem = main_list.InsertItem(i, logEntry.timestamp); // Вставляем первую колонку
+        main_list.SetItemText(nItem, 1, logEntry.level);
+        main_list.SetItemText(nItem, 2, logEntry.process);
+        main_list.SetItemText(nItem, 3, logEntry.message);
+        main_list.SetItemText(nItem, 4, logEntry.details);
+    }
 
-    return bResult; // Возвращаем сохраненное значение
+    return TRUE;  // return TRUE unless you set the focus to a control
 }
+
 void CInfoList::OnLvnItemchangedList3(NMHDR* pNMHDR, LRESULT* pResult)
 {
     LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
