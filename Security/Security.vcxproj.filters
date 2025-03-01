@@ -66,12 +66,13 @@
     <None Include="res\Security.rc2">
       <Filter>Файлы ресурсов</Filter>
     </None>
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\icon1.ico">
+    <Image Include="..\..\..\Downloads\Security.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>
-    <Image Include="D:\Security.ico">
+    <Image Include="res\Security.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>
   </ItemGroup>

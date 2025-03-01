@@ -49,11 +49,11 @@ BOOL CInfoList::OnInitDialog()
     // Настройка ListCtrl
     main_list.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
-    main_list.InsertColumn(0, _T("Timestamp"), LVCFMT_LEFT, 150);
-    main_list.InsertColumn(1, _T("Level"), LVCFMT_LEFT, 80);
-    main_list.InsertColumn(2, _T("Process"), LVCFMT_LEFT, 120);
-    main_list.InsertColumn(3, _T("Message"), LVCFMT_LEFT, 250);
-    main_list.InsertColumn(4, _T("Details"), LVCFMT_LEFT, 300);
+    main_list.InsertColumn(0, _T("Время"), LVCFMT_LEFT, 150);
+    main_list.InsertColumn(1, _T("Уровень"), LVCFMT_LEFT, 80);
+    main_list.InsertColumn(2, _T("Процесс"), LVCFMT_LEFT, 120);
+    main_list.InsertColumn(3, _T("Сообщение"), LVCFMT_LEFT, 250);
+    main_list.InsertColumn(4, _T("Детали"), LVCFMT_LEFT, 300);
 
     for (size_t i = 0; i < m_logs.size(); ++i)
     {
