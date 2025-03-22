@@ -44,8 +44,8 @@ void CInfoList::SetLogs(const std::vector<LogEntry>& logs)
 BOOL CInfoList::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
-    CFont font;
-    font.CreateFont(14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, _T("Calibri"));
+    //CFont font;
+    //font.CreateFont(14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, _T("Calibri"));
     // Настройка ListCtrl
     main_list.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
@@ -55,11 +55,11 @@ BOOL CInfoList::OnInitDialog()
     main_list.InsertColumn(3, _T("Сообщение"), LVCFMT_LEFT, 250);
     main_list.InsertColumn(4, _T("Детали"), LVCFMT_LEFT, 300);
 
-    for (size_t i = 0; i < m_logs.size(); ++i)
+    for (auto i = 0; i < m_logs.size(); ++i)
     {
         const LogEntry& logEntry = m_logs[i];
 
-        int nItem = main_list.InsertItem(i, logEntry.timestamp); // Вставляем первую колонку
+        auto nItem = main_list.InsertItem(i, logEntry.timestamp); // Вставляем первую колонку
         main_list.SetItemText(nItem, 1, logEntry.level);
         main_list.SetItemText(nItem, 2, logEntry.process);
         main_list.SetItemText(nItem, 3, logEntry.message);

@@ -1,43 +1,52 @@
-﻿
-// SecurityDlg.h: файл заголовка
-//
+﻿#pragma once
+#include "CInfoList.h"
+#include "LogStructure.h"
+#include "AppState.h"
+#include <vector>
 
-#pragma once
-
-
-// Диалоговое окно CSecurityDlg
 class CSecurityDlg : public CDialogEx
 {
-// Создание
 public:
-	CSecurityDlg(CWnd* pParent = nullptr);	// стандартный конструктор
+    CSecurityDlg(CWnd* pParent = nullptr);
 
-// Данные диалогового окна
-#ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_SECURITY_DIALOG };
-#endif
-
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// поддержка DDX/DDV
-
-
-// Реализация
 protected:
-	HICON m_hIcon;
+    virtual void DoDataExchange(CDataExchange* pDX);
 
-	// Созданные функции схемы сообщений
-	virtual BOOL OnInitDialog();
-	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
-	afx_msg void OnPaint();
-	afx_msg HCURSOR OnQueryDragIcon();
-	DECLARE_MESSAGE_MAP()
+protected:
+    HICON m_hIcon;
+    virtual BOOL OnInitDialog();
+    virtual void OnSysCommand(UINT nID, LPARAM lParam);
+    virtual void OnPaint();
+    virtual HCURSOR OnQueryDragIcon();
+
+    DECLARE_MESSAGE_MAP()
+
 public:
-	afx_msg void OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnEnChangeEdit2();
-	afx_msg void OnOpen();
-	afx_msg void OnApplyFilter();
-	afx_msg void OnFullCheck();
-	CEdit show_log;
-	afx_msg void OnSaveAs();
-	afx_msg void OnBnClickedButton3();
+    afx_msg void OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnEnChangeEdit2();
+    afx_msg void OnOpen();
+    afx_msg void OnApplyFilter();
+    afx_msg void OnFullCheck();
+    afx_msg void OnSaveAs();
+    afx_msg void OnBnClickedCheck2();
+    afx_msg void OnBnClickedCheck1();
+    afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult);
+
+private:
+    CEdit show_log;
+    CEdit edit_process;
+    CButton check_warns;
+    CButton check_fails;
+    CButton check_process;
+    CButton check_date;
+    CDateTimeCtrl date_from;
+    CDateTimeCtrl date_till;
+
+    std::vector<LogEntry> logs;
+    AppState state;
+
+    //template<typename T>
+    //void readFile(T& file, std::vector<LogEntry>& logs);
+    //void setCheckState(CButton& checkBox, CWnd& elem);
 };

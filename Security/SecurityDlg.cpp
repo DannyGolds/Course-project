@@ -9,7 +9,7 @@
 #include "afxdialogex.h"
 #include "CInfoList.h"
 #include "LogStructure.h"
-
+#include "AppState.h"
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -38,6 +38,9 @@ public:
 // Реализация
 protected:
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult);
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
@@ -50,6 +53,8 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+	ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER2, &CAboutDlg::OnChoiceDateFrom)
+	ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER1, &CAboutDlg::OnChoiceDateTill)
 END_MESSAGE_MAP()
 
 
@@ -58,15 +63,21 @@ END_MESSAGE_MAP()
 
 
 CSecurityDlg::CSecurityDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_SECURITY_DIALOG, pParent)
-{
-	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
-}
+	: CDialogEx(IDD_SECURITY_DIALOG, pParent) { m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);}
 
 void CSecurityDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_EDIT1, show_log);
+	//  DDX_Control(pDX, IDC_DATETIMEPICKER2, time_from);
+	//  DDX_Control(pDX, IDC_DATETIMEPICKER1, time_till);
+	DDX_Control(pDX, IDC_EDIT2, edit_process);
+	DDX_Control(pDX, IDC_CHECK3, check_warns);
+	DDX_Control(pDX, IDC_CHECK4, check_fails);
+	DDX_Control(pDX, IDC_CHECK1, check_process);
+	DDX_Control(pDX, IDC_CHECK2, check_date);
+	DDX_Control(pDX, IDC_DATETIMEPICKER2, date_from);
+	DDX_Control(pDX, IDC_DATETIMEPICKER1, date_till);
 }
 
 BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
@@ -79,6 +90,10 @@ BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON1, &CSecurityDlg::OnApplyFilter)
 	ON_BN_CLICKED(IDC_BUTTON3, &CSecurityDlg::OnFullCheck)
 	ON_COMMAND(ID_32775, &CSecurityDlg::OnSaveAs)
+	ON_BN_CLICKED(IDC_CHECK2, &CSecurityDlg::OnBnClickedCheck2)
+	ON_BN_CLICKED(IDC_CHECK1, &CSecurityDlg::OnBnClickedCheck1)
+	ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER2, &CSecurityDlg::OnChoiceDateFrom)
+	ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER1, &CSecurityDlg::OnChoiceDateTill)
 END_MESSAGE_MAP()
 
 
@@ -116,7 +131,9 @@ BOOL CSecurityDlg::OnInitDialog()
 	//  если главное окно приложения не является диалоговым
 	SetIcon(m_hIcon, TRUE);			// Крупный значок
 	SetIcon(m_hIcon, FALSE);		// Мелкий значок
-
+	date_from.EnableWindow(FALSE); // Отключаем элемент
+	date_till.EnableWindow(FALSE); // Отключаем элемент
+	edit_process.EnableWindow(FALSE);
 	// TODO: добавьте дополнительную инициализацию
 
 	return TRUE;  // возврат значения TRUE, если фокус не передан элементу управления
@@ -192,18 +209,22 @@ void CSecurityDlg::OnEnChangeEdit2()
 //Function templates 
 template<typename T>
 void readFile(T& file, std::vector<LogEntry>& logs);
+
+void setCheckState(CButton&, CWnd&);
 //End of Function templates
 
 
 //Global variables
 std::vector<LogEntry> logs;
+AppState state;
+CString logPath;
 //
 void CSecurityDlg::OnOpen()
 {
 	CFileDialog fileDialog(TRUE, NULL, L"*.txt;*.log;*.xml;*.csv");
 	if (fileDialog.DoModal() == IDOK)
 	{
-		auto logPath = fileDialog.GetPathName();
+		logPath = fileDialog.GetPathName();
 		CStdioFile file;
 		if (file.Open(logPath, CFile::modeRead)) // Проверка открытия файла
 		{
@@ -214,7 +235,7 @@ void CSecurityDlg::OnOpen()
 		}
 		else
 		{
-			AfxMessageBox(_T("Не удалось открыть файл!"));
+			TRACE(_T("Не удалось открыть файл!"));
 		}
 	}
 }
@@ -234,7 +255,7 @@ void CSecurityDlg::OnSaveAs()
 		}
 		else
 		{
-			AfxMessageBox(_T("Не удалось создать файл для сохранения!"));
+			TRACE(_T("Не удалось создать файл для сохранения!"));
 		}
 	}
 }
@@ -242,15 +263,47 @@ void CSecurityDlg::OnSaveAs()
 
 void CSecurityDlg::OnApplyFilter()
 {
-	
+	TRACE(state.dateFrom.Format("%d.%m.%Y"));
+	TRACE(state.dateTill.Format("%d.%m.%Y"));
 }
 
 void CSecurityDlg::OnFullCheck()
 {
-	CInfoList InfoList;
-	InfoList.SetLogs(logs);
-	InfoList.DoModal();
+	if (logPath != L"") {
+		CInfoList InfoList;
+		InfoList.SetLogs(logs);
+		InfoList.DoModal();
+	}
+	else {
+		AfxMessageBox(L"Вы не выбрали ни одного лог-файла. Проверка невозможна!");
+	}
+	
 }
+
+void CSecurityDlg::OnBnClickedCheck2()
+{
+	if (check_date.GetCheck() == BST_CHECKED) {
+		state.searchByDate = true;
+	}
+	else {
+		state.searchByDate = false;
+	}
+	setCheckState(check_date, date_from);
+	setCheckState(check_date, date_till);
+}
+
+
+void CSecurityDlg::OnBnClickedCheck1()
+{
+	if (check_process.GetCheck() == BST_CHECKED) {
+		state.searchByProc = true;
+	}
+	else {
+		state.searchByProc = false;
+	}
+	setCheckState(check_process, edit_process);
+}
+
 
 //Start of support functions
 
@@ -278,8 +331,56 @@ void readFile(T& file, std::vector<LogEntry>& logs)
 		}
 		else
 		{
-			TRACE(_T("Строка пропущена из-за недостаточного количества токенов: %s\n"), line);
+			AfxMessageBox(_T("Файл не соответствует требованиям! Чтение завершено с ошибкой.\n"));
 		}
 	}
 }
+
+void setCheckState(CButton& checkBox, CWnd& elem)
+{
+	if (checkBox.GetCheck() == BST_CHECKED)
+	{
+		elem.EnableWindow(TRUE); // Включаем элемент
+	}
+	else if (checkBox.GetCheck() == BST_UNCHECKED)
+	{
+		elem.EnableWindow(FALSE); // Отключаем элемент
+	}
+}
+
 //End of support functions
+void CSecurityDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
+	*pResult = 0;
+
+	CTime time; 
+	date_from.GetTime(time); // Проверяем, что дата успешно получена
+	state.dateFrom = time; // Сохраняем дату 
+}
+
+void CSecurityDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
+	// TODO: добавьте свой код обработчика уведомлений
+	*pResult = 0;
+	CTime time;
+	date_till.GetTime(time); // Проверяем, что дата успешно получена
+	state.dateTill = time; // Сохраняем дату в state
+	
+}
+
+
+void CAboutDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
+	// TODO: добавьте свой код обработчика уведомлений
+	*pResult = 0;
+}
+
+void CAboutDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
+	// TODO: добавьте свой код обработчика уведомлений
+	*pResult = 0;
+}

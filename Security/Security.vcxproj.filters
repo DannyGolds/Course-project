@@ -67,6 +67,9 @@
       <Filter>Файлы ресурсов</Filter>
     </None>
     <None Include="README.md" />
+    <None Include="resource.hm">
+      <Filter>Файлы заголовков</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\Downloads\Security.ico">
