@@ -193,14 +193,14 @@ void CSecurityDlg::OnSaveAs()
         std::ofstream fileToSave(logToSave, std::ios::out | std::ios::binary);
         if (fileToSave.is_open())
         {
-            std::string data = "Логи загружены!\r\n";
-            fileToSave.write(data.c_str(), data.size());
-            fileToSave.close();
+            std::string data = "Логи загружены!";
+            fileToSave << data;
         }
         else
         {
             TRACE(_T("Не удалось создать файл для сохранения!"));
         }
+        fileToSave.close();
     }
 }
 
@@ -328,4 +328,8 @@ void CAboutDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
 void CAboutDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
 {
     *pResult = 0;
+}
+
+void filterByParameters(AppState currentState) {
+
 }
