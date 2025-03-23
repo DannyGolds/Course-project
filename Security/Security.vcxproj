@@ -209,7 +209,6 @@
     <ResourceCompile Include="Security.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="README.md" />
     <None Include="resource.hm" />
     <None Include="res\Security.rc2" />
   </ItemGroup>

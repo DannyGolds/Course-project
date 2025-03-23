@@ -1,6 +1,5 @@
-﻿// CInfoList.cpp
-#include "pch.h"
-#include "Security.h" //  Замените на имя вашего проекта
+﻿#include "pch.h"
+#include "Security.h" // Замените на имя вашего проекта
 #include "afxdialogex.h"
 #include "CInfoList.h"
 
@@ -44,26 +43,28 @@ void CInfoList::SetLogs(const std::vector<LogEntry>& logs)
 BOOL CInfoList::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
-    //CFont font;
-    //font.CreateFont(14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, _T("Calibri"));
+
     // Настройка ListCtrl
     main_list.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
+    // Добавляем колонки
     main_list.InsertColumn(0, _T("Время"), LVCFMT_LEFT, 150);
     main_list.InsertColumn(1, _T("Уровень"), LVCFMT_LEFT, 80);
     main_list.InsertColumn(2, _T("Процесс"), LVCFMT_LEFT, 120);
     main_list.InsertColumn(3, _T("Сообщение"), LVCFMT_LEFT, 250);
     main_list.InsertColumn(4, _T("Детали"), LVCFMT_LEFT, 300);
 
-    for (auto i = 0; i < m_logs.size(); ++i)
+    // Заполняем список данными из m_logs
+    for (size_t i = 0; i < m_logs.size(); ++i)
     {
         const LogEntry& logEntry = m_logs[i];
 
-        auto nItem = main_list.InsertItem(i, logEntry.timestamp); // Вставляем первую колонку
-        main_list.SetItemText(nItem, 1, logEntry.level);
-        main_list.SetItemText(nItem, 2, logEntry.process);
-        main_list.SetItemText(nItem, 3, logEntry.message);
-        main_list.SetItemText(nItem, 4, logEntry.details);
+        // Вставляем строку и заполняем колонки
+        int nItem = main_list.InsertItem(i, logEntry.timestamp.c_str()); // Время
+        main_list.SetItemText(nItem, 1, logEntry.level.c_str());       // Уровень
+        main_list.SetItemText(nItem, 2, logEntry.process.c_str());     // Процесс
+        main_list.SetItemText(nItem, 3, logEntry.message.c_str());     // Сообщение
+        main_list.SetItemText(nItem, 4, logEntry.details.c_str());     // Детали
     }
 
     return TRUE;  // return TRUE unless you set the focus to a control

@@ -1,16 +1,12 @@
 #pragma once
-
+#include <string>
 struct LogEntry {
-    CString timestamp;     // Время события (UNIX timestamp)
-    CString level;            // Уровень важности: INFO, WARNING, ERROR, CRITICAL
-    CString process;    // Имя файла, где произошло событие
-    CString message;       // Текст сообщения
-    CString details;       // Дополнительные сведения (опционально)
-
-    LogEntry(CString timestamp,     // Время события (UNIX timestamp)
-        CString level,            // Уровень важности: INFO, WARNING, ERROR, CRITICAL
-        CString process,    // Имя файла, где произошло событие
-        CString message,       // Текст сообщения
-        CString details) : timestamp(timestamp), level(level), process(process), message(message), details(details) {
-    };
+    std::wstring timestamp;
+    std::wstring level;
+    std::wstring process;
+    std::wstring message;
+    std::wstring details;
+    LogEntry(const std::wstring& timestamp, const std::wstring& level, const std::wstring& process, const std::wstring& message, const std::wstring& details)
+        : timestamp(timestamp), level(level), process(process), message(message), details(details) {
+    }
 };
