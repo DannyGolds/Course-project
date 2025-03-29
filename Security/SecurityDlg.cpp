@@ -10,6 +10,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -17,12 +18,15 @@
 
 // Предварительные объявления шаблонных функций
 template<typename T>
-void readFile(T& file, std::vector<LogEntry>& logs);
-
+void readFile(T&, std::vector<LogEntry>& );
+void filterByParameters(const AppState, const std::vector<LogEntry>&, std::vector<LogEntry>&);
+bool WStringToCTime(const std::wstring&, CTime&);
 void setCheckState(CButton&, CWnd&);
+std::wstring UTF8ToUTF16(const std::string&);
 
 // Глобальные переменные
 std::vector<LogEntry> logs;
+std::vector<LogEntry> copied_logs;
 AppState state;
 CString logPath;
 
@@ -44,8 +48,8 @@ protected:
 protected:
     DECLARE_MESSAGE_MAP()
 public:
-    afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
-    afx_msg void OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult);
+   /* afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult);*/
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
@@ -57,9 +61,9 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
     CDialogEx::DoDataExchange(pDX);
 }
 
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)/*
     ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER2, &CAboutDlg::OnChoiceDateFrom)
-    ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER1, &CAboutDlg::OnChoiceDateTill)
+    ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER1, &CAboutDlg::OnChoiceDateTill)*/
 END_MESSAGE_MAP()
 
 // Диалоговое окно CSecurityDlg
@@ -75,11 +79,13 @@ void CSecurityDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_EDIT1, show_log);
     DDX_Control(pDX, IDC_EDIT2, edit_process);
     DDX_Control(pDX, IDC_CHECK3, check_warns);
-    DDX_Control(pDX, IDC_CHECK4, check_fails);
+    DDX_Control(pDX, IDC_CHECK4, check_info);
     DDX_Control(pDX, IDC_CHECK1, check_process);
     DDX_Control(pDX, IDC_CHECK2, check_date);
     DDX_Control(pDX, IDC_DATETIMEPICKER2, date_from);
     DDX_Control(pDX, IDC_DATETIMEPICKER1, date_till);
+    DDX_Control(pDX, IDC_BUTTON3, btn_check);
+    DDX_Control(pDX, IDC_BUTTON1, btn_apply);
 }
 
 BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
@@ -87,15 +93,17 @@ BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
     ON_WM_PAINT()
     ON_WM_QUERYDRAGICON()
     ON_NOTIFY(NM_CUSTOMDRAW, IDC_PROGRESS1, &CSecurityDlg::OnNMCustomdrawProgress1)
-    ON_EN_CHANGE(IDC_EDIT2, &CSecurityDlg::OnEnChangeEdit2)
+    ON_EN_CHANGE(IDC_EDIT2, &CSecurityDlg::OnChangeProcName)
     ON_COMMAND(ID_Open, &CSecurityDlg::OnOpen)
     ON_BN_CLICKED(IDC_BUTTON1, &CSecurityDlg::OnApplyFilter)
     ON_BN_CLICKED(IDC_BUTTON3, &CSecurityDlg::OnFullCheck)
     ON_COMMAND(ID_32775, &CSecurityDlg::OnSaveAs)
-    ON_BN_CLICKED(IDC_CHECK2, &CSecurityDlg::OnBnClickedCheck2)
-    ON_BN_CLICKED(IDC_CHECK1, &CSecurityDlg::OnBnClickedCheck1)
+    ON_BN_CLICKED(IDC_CHECK2, &CSecurityDlg::OnSearchingByDate)
+    ON_BN_CLICKED(IDC_CHECK1, &CSecurityDlg::OnSearchingByProc)
     ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER2, &CSecurityDlg::OnChoiceDateFrom)
     ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER1, &CSecurityDlg::OnChoiceDateTill)
+    ON_BN_CLICKED(IDC_CHECK4, &CSecurityDlg::OnHideInfo)
+    ON_BN_CLICKED(IDC_CHECK3, &CSecurityDlg::OnHideWarns)
 END_MESSAGE_MAP()
 
 BOOL CSecurityDlg::OnInitDialog()
@@ -159,10 +167,6 @@ void CSecurityDlg::OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult)
     *pResult = 0;
 }
 
-void CSecurityDlg::OnEnChangeEdit2()
-{
-    // Обработка изменения текста
-}
 
 void CSecurityDlg::OnOpen()
 {
@@ -176,6 +180,12 @@ void CSecurityDlg::OnOpen()
             show_log.SetWindowTextW(logPath);
             readFile(file, logs);
             file.close();
+            btn_check.EnableWindow(TRUE);
+            check_date.EnableWindow(TRUE);
+            check_info.EnableWindow(TRUE);
+            check_process.EnableWindow(TRUE);
+            check_warns.EnableWindow(TRUE);
+            btn_apply.EnableWindow(TRUE);
         }
         else
         {
@@ -206,56 +216,119 @@ void CSecurityDlg::OnSaveAs()
 
 void CSecurityDlg::OnApplyFilter()
 {
-    TRACE(state.dateFrom.Format(L"%d.%m.%Y"));
-    TRACE(state.dateTill.Format(L"%d.%m.%Y"));
+    filterByParameters(state, logs, copied_logs);
 }
 
 void CSecurityDlg::OnFullCheck()
 {
-    if (logPath != L"") {
         CInfoList InfoList;
-        InfoList.SetLogs(logs);
+        InfoList.SetLogs(copied_logs);
         InfoList.DoModal();
-    }
-    else {
-        AfxMessageBox(L"Вы не выбрали ни одного лог-файла. Проверка невозможна!");
-    }
 }
 
-void CSecurityDlg::OnBnClickedCheck2()
+void CSecurityDlg::OnSearchingByDate()
 {
     state.searchByDate = (check_date.GetCheck() == BST_CHECKED);
     setCheckState(check_date, date_from);
     setCheckState(check_date, date_till);
 }
 
-void CSecurityDlg::OnBnClickedCheck1()
+void CSecurityDlg::OnSearchingByProc()
 {
     state.searchByProc = (check_process.GetCheck() == BST_CHECKED);
     setCheckState(check_process, edit_process);
 }
 
-std::wstring UTF8ToUTF16(const std::string& utf8) {
-    if (utf8.empty()) return std::wstring();
+// Реализация шаблонной функции readFile
 
-    // Находим длину строки до первого нулевого символа
-    size_t length = utf8.find('\0');
-    if (length == std::string::npos) {
-        length = utf8.size(); // Если нулевой символ не найден, берём всю строку
-    }
+// Реализация функции setCheckState
 
-    // Вычисляем размер буфера для UTF-16
-    int size = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(length), nullptr, 0);
-    if (size == 0) return std::wstring();
+void CSecurityDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
+{
+    LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
+    *pResult = 0;
 
-    // Преобразуем UTF-8 в UTF-16
-    std::wstring utf16(size, 0);
-    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(length), &utf16[0], size);
-
-    return utf16;
+    CTime time;
+    date_from.GetTime(time);
+    state.dateFrom = time;
 }
 
-// Реализация шаблонной функции readFile
+void CSecurityDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
+{
+    LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
+    *pResult = 0;
+
+    CTime time;
+    date_till.GetTime(time);
+    state.dateTill = time;
+}
+
+void CSecurityDlg::OnChangeProcName()
+{
+    CString str;
+    edit_process.GetWindowTextW(str);
+    state.procName = std::wstring(str.GetString());
+}
+
+void CSecurityDlg::OnHideInfo()
+{
+    state.isInfoHidden = (check_info.GetCheck() == BST_CHECKED);
+}
+
+
+void CSecurityDlg::OnHideWarns() {
+    state.isWarningsHidden = (check_warns.GetCheck() == BST_CHECKED);
+}
+
+void setCheckState(CButton& checkBox, CWnd& elem)
+{
+    elem.EnableWindow(checkBox.GetCheck() == BST_CHECKED);
+}
+
+
+void filterByParameters(const AppState currentState, const std::vector<LogEntry>& logs, std::vector<LogEntry>& copied_logs) {
+    copied_logs.clear();
+    copied_logs = logs;
+    if (currentState.isInfoHidden) {
+        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+            [](const LogEntry& log) { return log.level == L"INFO"; }),
+            copied_logs.end());
+    }
+    if (currentState.isWarningsHidden) {
+        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+            [](const LogEntry& log) { return log.level == L"WARNING"; }),
+            copied_logs.end());
+    }
+    if (currentState.searchByProc) {
+        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+            [currentState](const LogEntry& log) { return log.process != currentState.procName; }),
+            copied_logs.end());
+    }
+    if (currentState.searchByDate) {
+        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+            [currentState](const LogEntry& log) { return !(log.timestamp <= currentState.dateTill && log.timestamp >= currentState.dateFrom); }),
+            copied_logs.end());
+    }
+}
+
+bool WStringToCTime(const std::wstring& dateStr, CTime& outTime) {
+    int day = 0, month = 0, year = 0;
+
+    // Парсим строку формата "dd.mm.yyyy"
+    if (swscanf_s(dateStr.c_str(), L"%d.%d.%d", &day, &month, &year) != 3) {
+        return false;  // Ошибка парсинга
+    }
+
+    try {
+        // Создаем CTime (месяц 1-12, день 1-31, год 1970-2038)
+        outTime = CTime(year, month, day, 0, 0, 0);
+        return true;
+    }
+    catch (...) {
+        return false;  // Некорректная дата (напр., 30.02.2023)
+    }
+}
+
 template<typename T>
 void readFile(T& file, std::vector<LogEntry>& logs)
 {
@@ -282,7 +355,9 @@ void readFile(T& file, std::vector<LogEntry>& logs)
         // Если токенов достаточно, создаем LogEntry
         if (tokens.size() >= 4)
         {
-            LogEntry logEntry(tokens[0], tokens[1], tokens[2], tokens[3], tokens[4]);
+            CTime date;
+            WStringToCTime(tokens[0], date);
+            LogEntry logEntry(date, tokens[1], tokens[2], tokens[3], tokens[4]);
             logs.push_back(logEntry);
         }
         else
@@ -294,42 +369,22 @@ void readFile(T& file, std::vector<LogEntry>& logs)
     if (errorMsg.GetLength() > 0) AfxMessageBox(errorMsg);
 }
 
-// Реализация функции setCheckState
-void setCheckState(CButton& checkBox, CWnd& elem)
-{
-    elem.EnableWindow(checkBox.GetCheck() == BST_CHECKED);
-}
+std::wstring UTF8ToUTF16(const std::string& utf8) {
+    if (utf8.empty()) return std::wstring();
 
-void CSecurityDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
-{
-    LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
-    *pResult = 0;
+    // Находим длину строки до первого нулевого символа
+    size_t length = utf8.find('\0');
+    if (length == std::string::npos) {
+        length = utf8.size(); // Если нулевой символ не найден, берём всю строку
+    }
 
-    CTime time;
-    date_from.GetTime(time);
-    state.dateFrom = time;
-}
+    // Вычисляем размер буфера для UTF-16
+    int size = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(length), nullptr, 0);
+    if (size == 0) return std::wstring();
 
-void CSecurityDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
-{
-    LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
-    *pResult = 0;
+    // Преобразуем UTF-8 в UTF-16
+    std::wstring utf16(size, 0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(length), &utf16[0], size);
 
-    CTime time;
-    date_till.GetTime(time);
-    state.dateTill = time;
-}
-
-void CAboutDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
-{
-    *pResult = 0;
-}
-
-void CAboutDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
-{
-    *pResult = 0;
-}
-
-void filterByParameters(AppState currentState) {
-
+    return utf16;
 }

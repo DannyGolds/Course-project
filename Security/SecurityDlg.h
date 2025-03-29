@@ -23,13 +23,13 @@ protected:
 
 public:
     afx_msg void OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult);
-    afx_msg void OnEnChangeEdit2();
+    afx_msg void OnChangeProcName();
     afx_msg void OnOpen();
     afx_msg void OnApplyFilter();
     afx_msg void OnFullCheck();
     afx_msg void OnSaveAs();
-    afx_msg void OnBnClickedCheck2();
-    afx_msg void OnBnClickedCheck1();
+    afx_msg void OnSearchingByDate();
+    afx_msg void OnSearchingByProc();
     afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
     afx_msg void OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult);
 
@@ -37,9 +37,11 @@ private:
     CEdit show_log;
     CEdit edit_process;
     CButton check_warns;
-    CButton check_fails;
+    CButton check_info;
     CButton check_process;
+    CButton btn_check;
     CButton check_date;
+    CButton btn_apply;
     CDateTimeCtrl date_from;
     CDateTimeCtrl date_till;
 
@@ -49,4 +51,7 @@ private:
     //template<typename T>
     //void readFile(T& file, std::vector<LogEntry>& logs);
     //void setCheckState(CButton& checkBox, CWnd& elem);
+public:
+    afx_msg void OnHideInfo();
+    afx_msg void OnHideWarns();
 };

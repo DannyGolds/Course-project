@@ -6,28 +6,28 @@ struct AppState {
 	//Путь к логам
 	std::string logsPath;
 	//Показывать ли предупреждения
-	bool isWarningsShowed;
+	bool isWarningsHidden;
 	//Показывать ли ошибки
-	bool isFailsShowed;
+	bool isInfoHidden;
 	//Разрешить поиск по процессу
 	bool searchByProc;
 	//Имя процесса
-	std::string procName;
+	std::wstring procName;
 	//Разрешить поиск по дате
 	bool searchByDate;
 	//Начальная дата поиска
 	CTime dateFrom;
 	//Конечная дата поиска
 	CTime dateTill;
-	AppState(bool logs, std::string logsPath, bool warns, bool fails, bool byProc, std::string procName, bool byDate, CTime from, CTime till) :
+	AppState(bool logs, std::string logsPath, bool warns, bool info, bool byProc, std::wstring procName, bool byDate, CTime from, CTime till) :
 		isLogsLoaded(logs), logsPath(logsPath),
-		isWarningsShowed(warns), isFailsShowed(fails),
+		isWarningsHidden(warns), isInfoHidden(info),
 		searchByProc(byProc), procName(procName),
 		searchByDate(byDate),dateFrom(from), dateTill(till) {};
 	AppState() :
 		isLogsLoaded(false), logsPath(""),
-		isWarningsShowed(false), isFailsShowed(false),
-		searchByProc(false), procName(""),
+		isWarningsHidden(false), isInfoHidden(false),
+		searchByProc(false), procName(L""),
 		searchByDate(false), dateFrom(CTime::GetCurrentTime()), dateTill(CTime::GetCurrentTime()) {
 	}
 };

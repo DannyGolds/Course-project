@@ -40,6 +40,8 @@ void CInfoList::SetLogs(const std::vector<LogEntry>& logs)
     m_logs = logs;
 }
 
+std::wstring CTimeToWString(const CTime&);
+
 BOOL CInfoList::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
@@ -58,9 +60,8 @@ BOOL CInfoList::OnInitDialog()
     for (size_t i = 0; i < m_logs.size(); ++i)
     {
         const LogEntry& logEntry = m_logs[i];
-
         // Вставляем строку и заполняем колонки
-        int nItem = main_list.InsertItem(i, logEntry.timestamp.c_str()); // Время
+        auto nItem = main_list.InsertItem(i, CTimeToWString(logEntry.timestamp).c_str()); // Время
         main_list.SetItemText(nItem, 1, logEntry.level.c_str());       // Уровень
         main_list.SetItemText(nItem, 2, logEntry.process.c_str());     // Процесс
         main_list.SetItemText(nItem, 3, logEntry.message.c_str());     // Сообщение
@@ -75,4 +76,12 @@ void CInfoList::OnLvnItemchangedList3(NMHDR* pNMHDR, LRESULT* pResult)
     LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
     // TODO: добавьте свой код обработчика уведомлений
     *pResult = 0;
+}
+
+std::wstring CTimeToWString(const CTime& time) {
+    // Форматируем дату через CTime::Format()
+    CString formattedDate = time.Format(L"%d.%m.%Y");
+
+    // Конвертируем CString в std::wstring
+    return std::wstring(formattedDate.GetString());
 }
