@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "CInfoList.h"
-#include "LogStructure.h"
-#include "AppState.h"
+#include "Structures.h"
 #include <vector>
 
 class CSecurityDlg : public CDialogEx
@@ -27,7 +26,6 @@ public:
     afx_msg void OnOpen();
     afx_msg void OnApplyFilter();
     afx_msg void OnFullCheck();
-    afx_msg void OnSaveAs();
     afx_msg void OnSearchingByDate();
     afx_msg void OnSearchingByProc();
     afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
@@ -44,14 +42,10 @@ private:
     CButton btn_apply;
     CDateTimeCtrl date_from;
     CDateTimeCtrl date_till;
-
     std::vector<LogEntry> logs;
     AppState state;
-
-    //template<typename T>
-    //void readFile(T& file, std::vector<LogEntry>& logs);
-    //void setCheckState(CButton& checkBox, CWnd& elem);
 public:
     afx_msg void OnHideInfo();
     afx_msg void OnHideWarns();
+    afx_msg void OnSave();
 };

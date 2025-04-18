@@ -2,18 +2,13 @@
 #include "Security.h" // Замените на имя вашего проекта
 #include "afxdialogex.h"
 #include "CInfoList.h"
-
-#pragma execution_character_set("utf-8")
-
-// Диалоговое окно CInfoList
+#include "Structures.h"
+#include "Globals.h"
 
 IMPLEMENT_DYNAMIC(CInfoList, CDialogEx)
 
 CInfoList::CInfoList(CWnd* pParent /*=nullptr*/)
     : CDialogEx(IDD_DIALOG1, pParent)
-    , error_count(_T("0"))
-    , warning_count(_T("0"))
-    , system_state(_T("Нормальное"))
 {
 }
 
@@ -25,20 +20,11 @@ void CInfoList::DoDataExchange(CDataExchange* pDX)
 {
     CDialogEx::DoDataExchange(pDX);
     DDX_Control(pDX, IDC_LIST3, main_list); // Используем main_list
-    DDX_Text(pDX, IDC_EDIT1, error_count);
-    DDX_Text(pDX, IDC_EDIT2, warning_count);
-    DDX_Text(pDX, IDC_EDIT3, system_state);
 }
 
 BEGIN_MESSAGE_MAP(CInfoList, CDialogEx)
     ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST3, &CInfoList::OnLvnItemchangedList3)
 END_MESSAGE_MAP()
-
-// Обработчики сообщений CInfoList
-void CInfoList::SetLogs(const std::vector<LogEntry>& logs)
-{
-    m_logs = logs;
-}
 
 std::wstring CTimeToWString(const CTime&);
 
@@ -50,21 +36,22 @@ BOOL CInfoList::OnInitDialog()
     main_list.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
     // Добавляем колонки
-    main_list.InsertColumn(0, _T("Время"), LVCFMT_LEFT, 150);
-    main_list.InsertColumn(1, _T("Уровень"), LVCFMT_LEFT, 80);
-    main_list.InsertColumn(2, _T("Процесс"), LVCFMT_LEFT, 120);
-    main_list.InsertColumn(3, _T("Сообщение"), LVCFMT_LEFT, 250);
-    main_list.InsertColumn(4, _T("Детали"), LVCFMT_LEFT, 300);
+    main_list.InsertColumn(0, _T("ID процесса"), LVCFMT_LEFT, 100);
+    main_list.InsertColumn(1, _T("Время исполнения"), LVCFMT_LEFT, 100);
+    main_list.InsertColumn(2, _T("Название процесса"), LVCFMT_LEFT, 300);
+    main_list.InsertColumn(3, _T("Имя команды"), LVCFMT_LEFT, 120);
+    main_list.InsertColumn(4, _T("Уровень подозрительности"), LVCFMT_LEFT, 250);
 
     // Заполняем список данными из m_logs
-    for (size_t i = 0; i < m_logs.size(); ++i)
+    for (size_t i = 0; i < copied_logs.size(); ++i)
     {
-        const LogEntry& logEntry = m_logs[i];
+        const LogEntry& logEntry = copied_logs[i];
+        std::wstring string_time = CTimeToWString(logEntry.time);
         // Вставляем строку и заполняем колонки
-        auto nItem = main_list.InsertItem(i, CTimeToWString(logEntry.timestamp).c_str()); // Время
-        main_list.SetItemText(nItem, 1, logEntry.level.c_str());       // Уровень
-        main_list.SetItemText(nItem, 2, logEntry.process.c_str());     // Процесс
-        main_list.SetItemText(nItem, 3, logEntry.message.c_str());     // Сообщение
+        auto nItem = main_list.InsertItem(i, logEntry.PID.c_str()); // ID процесса
+        main_list.SetItemText(nItem, 1, string_time.c_str()); //Время
+        main_list.SetItemText(nItem, 2, logEntry.process.c_str());       // Процесс
+        main_list.SetItemText(nItem, 3, logEntry.command.c_str());     // Команда
         main_list.SetItemText(nItem, 4, logEntry.details.c_str());     // Детали
     }
 
@@ -80,8 +67,8 @@ void CInfoList::OnLvnItemchangedList3(NMHDR* pNMHDR, LRESULT* pResult)
 
 std::wstring CTimeToWString(const CTime& time) {
     // Форматируем дату через CTime::Format()
-    CString formattedDate = time.Format(L"%d.%m.%Y");
+    CString formattedTime = time.Format(L"%T");
 
     // Конвертируем CString в std::wstring
-    return std::wstring(formattedDate.GetString());
+    return std::wstring(formattedTime.GetString());
 }

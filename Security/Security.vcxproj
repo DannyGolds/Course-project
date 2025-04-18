@@ -184,18 +184,20 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AppState.h" />
     <ClInclude Include="CInfoList.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="LogStructure.h" />
+    <ClInclude Include="Globals.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Security.h" />
     <ClInclude Include="SecurityDlg.h" />
+    <ClInclude Include="Structures.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CInfoList.cpp" />
+    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -204,6 +206,7 @@
     </ClCompile>
     <ClCompile Include="Security.cpp" />
     <ClCompile Include="SecurityDlg.cpp" />
+    <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Security.rc" />

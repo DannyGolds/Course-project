@@ -4,69 +4,26 @@
 #include "SecurityDlg.h"
 #include "afxdialogex.h"
 #include "CInfoList.h"
-#include "LogStructure.h"
-#include "AppState.h"
+#include "Structures.h"
+#include "Globals.h"
+#include "Utils.h"
+
 #include <fstream>
 #include <iostream>
+#include <sstream>
+
 #include <string>
 #include <vector>
-#include <algorithm>
+#include <map>
+
+#include <thread>
+#include <mutex>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-// Предварительные объявления шаблонных функций
-template<typename T>
-void readFile(T&, std::vector<LogEntry>& );
-void filterByParameters(const AppState, const std::vector<LogEntry>&, std::vector<LogEntry>&);
-bool WStringToCTime(const std::wstring&, CTime&);
-void setCheckState(CButton&, CWnd&);
-std::wstring UTF8ToUTF16(const std::string&);
 
-// Глобальные переменные
-std::vector<LogEntry> logs;
-std::vector<LogEntry> copied_logs;
-AppState state;
-CString logPath;
-
-// Диалоговое окно CAboutDlg используется для описания сведений о приложении
-class CAboutDlg : public CDialogEx
-{
-public:
-    CAboutDlg();
-
-    // Данные диалогового окна
-#ifdef AFX_DESIGN_TIME
-    enum { IDD = IDD_ABOUTBOX };
-#endif
-
-protected:
-    virtual void DoDataExchange(CDataExchange* pDX);    // поддержка DDX/DDV
-
-    // Реализация
-protected:
-    DECLARE_MESSAGE_MAP()
-public:
-   /* afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
-    afx_msg void OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult);*/
-};
-
-CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
-{
-}
-
-void CAboutDlg::DoDataExchange(CDataExchange* pDX)
-{
-    CDialogEx::DoDataExchange(pDX);
-}
-
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)/*
-    ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER2, &CAboutDlg::OnChoiceDateFrom)
-    ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER1, &CAboutDlg::OnChoiceDateTill)*/
-END_MESSAGE_MAP()
-
-// Диалоговое окно CSecurityDlg
 CSecurityDlg::CSecurityDlg(CWnd* pParent /*=nullptr*/)
     : CDialogEx(IDD_SECURITY_DIALOG, pParent)
 {
@@ -97,13 +54,13 @@ BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
     ON_COMMAND(ID_Open, &CSecurityDlg::OnOpen)
     ON_BN_CLICKED(IDC_BUTTON1, &CSecurityDlg::OnApplyFilter)
     ON_BN_CLICKED(IDC_BUTTON3, &CSecurityDlg::OnFullCheck)
-    ON_COMMAND(ID_32775, &CSecurityDlg::OnSaveAs)
     ON_BN_CLICKED(IDC_CHECK2, &CSecurityDlg::OnSearchingByDate)
     ON_BN_CLICKED(IDC_CHECK1, &CSecurityDlg::OnSearchingByProc)
     ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER2, &CSecurityDlg::OnChoiceDateFrom)
     ON_NOTIFY(DTN_DATETIMECHANGE, IDC_DATETIMEPICKER1, &CSecurityDlg::OnChoiceDateTill)
     ON_BN_CLICKED(IDC_CHECK4, &CSecurityDlg::OnHideInfo)
     ON_BN_CLICKED(IDC_CHECK3, &CSecurityDlg::OnHideWarns)
+    ON_COMMAND(ID_32778, &CSecurityDlg::OnSave)
 END_MESSAGE_MAP()
 
 BOOL CSecurityDlg::OnInitDialog()
@@ -126,15 +83,7 @@ BOOL CSecurityDlg::OnInitDialog()
 
 void CSecurityDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
-    if ((nID & 0xFFF0) == IDM_ABOUTBOX)
-    {
-        CAboutDlg dlgAbout;
-        dlgAbout.DoModal();
-    }
-    else
-    {
-        CDialogEx::OnSysCommand(nID, lParam);
-    }
+	CDialogEx::OnSysCommand(nID, lParam);
 }
 
 void CSecurityDlg::OnPaint()
@@ -167,63 +116,33 @@ void CSecurityDlg::OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult)
     *pResult = 0;
 }
 
-
 void CSecurityDlg::OnOpen()
 {
-    CFileDialog fileDialog(TRUE, NULL, L"*.txt;*.log;*.xml;*.csv");
+    CFileDialog fileDialog(TRUE, _T("strace.log"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Файлы журналирования |*.log;*.txt||"));
     if (fileDialog.DoModal() == IDOK)
     {
         logPath = fileDialog.GetPathName();
-        std::ifstream file(logPath, std::ios::in | std::ios::binary);
-        if (file.is_open())
-        {
-            show_log.SetWindowTextW(logPath);
-            readFile(file, logs);
-            file.close();
-            btn_check.EnableWindow(TRUE);
-            check_date.EnableWindow(TRUE);
-            check_info.EnableWindow(TRUE);
-            check_process.EnableWindow(TRUE);
-            check_warns.EnableWindow(TRUE);
-            btn_apply.EnableWindow(TRUE);
+        std::ifstream file(logPath, std::ios::in);
+        try {
+                show_log.SetWindowTextW(logPath);
+                readFile(file, logs);
+                file.close();
+                btn_check.EnableWindow(TRUE);
+                check_date.EnableWindow(TRUE);
+                check_info.EnableWindow(TRUE);
+                check_process.EnableWindow(TRUE);
+                check_warns.EnableWindow(TRUE);
+                btn_apply.EnableWindow(TRUE);
         }
-        else
-        {
-            TRACE(_T("Не удалось открыть файл!"));
+        catch(...) {
+            AfxMessageBox(_T("Ошибка открытия файла"));
         }
-    }
-}
-
-void CSecurityDlg::OnSaveAs()
-{
-    CFileDialog fileDialog(FALSE, NULL, L"Конфигурация системы.log");
-    if (fileDialog.DoModal() == IDOK)
-    {
-        auto logToSave = fileDialog.GetPathName();
-        std::ofstream fileToSave(logToSave, std::ios::out | std::ios::binary);
-        if (fileToSave.is_open())
-        {
-            std::string data = "Логи загружены!";
-            fileToSave << data;
-        }
-        else
-        {
-            TRACE(_T("Не удалось создать файл для сохранения!"));
-        }
-        fileToSave.close();
     }
 }
 
 void CSecurityDlg::OnApplyFilter()
 {
     filterByParameters(state, logs, copied_logs);
-}
-
-void CSecurityDlg::OnFullCheck()
-{
-        CInfoList InfoList;
-        InfoList.SetLogs(copied_logs);
-        InfoList.DoModal();
 }
 
 void CSecurityDlg::OnSearchingByDate()
@@ -238,10 +157,6 @@ void CSecurityDlg::OnSearchingByProc()
     state.searchByProc = (check_process.GetCheck() == BST_CHECKED);
     setCheckState(check_process, edit_process);
 }
-
-// Реализация шаблонной функции readFile
-
-// Реализация функции setCheckState
 
 void CSecurityDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
 {
@@ -275,7 +190,6 @@ void CSecurityDlg::OnHideInfo()
     state.isInfoHidden = (check_info.GetCheck() == BST_CHECKED);
 }
 
-
 void CSecurityDlg::OnHideWarns() {
     state.isWarningsHidden = (check_warns.GetCheck() == BST_CHECKED);
 }
@@ -285,106 +199,29 @@ void setCheckState(CButton& checkBox, CWnd& elem)
     elem.EnableWindow(checkBox.GetCheck() == BST_CHECKED);
 }
 
-
-void filterByParameters(const AppState currentState, const std::vector<LogEntry>& logs, std::vector<LogEntry>& copied_logs) {
-    copied_logs.clear();
-    copied_logs = logs;
-    if (currentState.isInfoHidden) {
-        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-            [](const LogEntry& log) { return log.level == L"INFO"; }),
-            copied_logs.end());
-    }
-    if (currentState.isWarningsHidden) {
-        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-            [](const LogEntry& log) { return log.level == L"WARNING"; }),
-            copied_logs.end());
-    }
-    if (currentState.searchByProc) {
-        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-            [currentState](const LogEntry& log) { return log.process != currentState.procName; }),
-            copied_logs.end());
-    }
-    if (currentState.searchByDate) {
-        copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-            [currentState](const LogEntry& log) { return !(log.timestamp <= currentState.dateTill && log.timestamp >= currentState.dateFrom); }),
-            copied_logs.end());
-    }
-}
-
-bool WStringToCTime(const std::wstring& dateStr, CTime& outTime) {
-    int day = 0, month = 0, year = 0;
-
-    // Парсим строку формата "dd.mm.yyyy"
-    if (swscanf_s(dateStr.c_str(), L"%d.%d.%d", &day, &month, &year) != 3) {
-        return false;  // Ошибка парсинга
-    }
-
-    try {
-        // Создаем CTime (месяц 1-12, день 1-31, год 1970-2038)
-        outTime = CTime(year, month, day, 0, 0, 0);
-        return true;
-    }
-    catch (...) {
-        return false;  // Некорректная дата (напр., 30.02.2023)
-    }
-}
-
-template<typename T>
-void readFile(T& file, std::vector<LogEntry>& logs)
+void CSecurityDlg::OnFullCheck()
 {
-    CString errorMsg = _T("");
-    std::string line;
-    while (std::getline(file, line))
+    CInfoList list;
+    list.DoModal();
+}
+
+void CSecurityDlg::OnSave()
+{
+    CFileDialog fileDialog(FALSE, NULL, L"Конфигурация системы.log");
+    if (fileDialog.DoModal() == IDOK)
     {
-        // Конвертируем строку из UTF-8 в UTF-16
-        std::wstring utf16Line = UTF8ToUTF16(line);
-
-        // Разделяем строку на токены
-        std::vector<std::wstring> tokens;
-        size_t start = 0;
-        size_t end = utf16Line.find(L',');
-
-        while (end != std::wstring::npos)
+        auto logToSave = fileDialog.GetPathName();
+        std::ofstream fileToSave(logToSave, std::ios::app);
+        if (fileToSave.is_open())
         {
-            tokens.push_back(utf16Line.substr(start, end - start));
-            start = end + 1;
-            end = utf16Line.find(L',', start);
-        }
-        tokens.push_back(utf16Line.substr(start, end));
-
-        // Если токенов достаточно, создаем LogEntry
-        if (tokens.size() >= 4)
-        {
-            CTime date;
-            WStringToCTime(tokens[0], date);
-            LogEntry logEntry(date, tokens[1], tokens[2], tokens[3], tokens[4]);
-            logs.push_back(logEntry);
+            std::string data = "Логи загружены!";
+            fileToSave << data;
         }
         else
         {
-            continue;
-            errorMsg = _T("Некоторые или все строки файла не соответствуют требованиям!");
+            TRACE(_T("Не удалось создать файл для сохранения!"));
         }
+        fileToSave.close();
     }
-    if (errorMsg.GetLength() > 0) AfxMessageBox(errorMsg);
 }
 
-std::wstring UTF8ToUTF16(const std::string& utf8) {
-    if (utf8.empty()) return std::wstring();
-
-    // Находим длину строки до первого нулевого символа
-    size_t length = utf8.find('\0');
-    if (length == std::string::npos) {
-        length = utf8.size(); // Если нулевой символ не найден, берём всю строку
-    }
-
-    // Вычисляем размер буфера для UTF-16
-    int size = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(length), nullptr, 0);
-    if (size == 0) return std::wstring();
-
-    // Преобразуем UTF-8 в UTF-16
-    std::wstring utf16(size, 0);
-    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(length), &utf16[0], size);
-
-    return utf16;
-}
