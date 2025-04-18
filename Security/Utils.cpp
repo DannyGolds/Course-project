@@ -8,149 +8,36 @@
 #include <future>
 #include <queue>
 #include <condition_variable>
+#include <string>
+#include <algorithm>
+#include <codecvt>
+#include <locale>
+#include <Windows.h>
 
-class ThreadPool {
-private:
-    std::vector<std::thread> workers;
-    std::queue<std::function<void()>> tasks;
-    std::mutex queueMutex;
-    std::condition_variable condition;
-    bool stop = false;
-
-public:
-    ThreadPool(size_t numThreads) {
-        for (size_t i = 0; i < numThreads; ++i) {
-            workers.emplace_back([this]() {
-                while (true) {
-                    std::function<void()> task;
-                    {
-                        std::unique_lock<std::mutex> lock(queueMutex);
-                        condition.wait(lock, [this]() { return stop || !tasks.empty(); });
-                        if (stop && tasks.empty()) return;
-                        task = std::move(tasks.front());
-                        tasks.pop();
-                    }
-                    task();
-                }
-                });
-        }
-    }
-
-    ~ThreadPool() {
-        {
-            std::unique_lock<std::mutex> lock(queueMutex);
-            stop = true;
-        }
-        condition.notify_all();
-        for (std::thread& worker : workers) {
-            worker.join();
-        }
-    }
-
-    template <class F, class... Args>
-    auto enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type> {
-        using returnType = typename std::invoke_result<F, Args...>::type;
-
-        auto task = std::make_shared<std::packaged_task<returnType()>>(
-            std::bind(std::forward<F>(f), std::forward<Args>(args)...)
-        );
-
-        std::future<returnType> res = task->get_future();
-        {
-            std::unique_lock<std::mutex> lock(queueMutex);
-            if (stop) throw std::runtime_error("enqueue on stopped ThreadPool");
-            tasks.emplace([task]() { (*task)(); });
-        }
-        condition.notify_one();
-        return res;
-    };
-};
-
-void filterByParameters(const AppState currentState, const std::vector<LogEntry>& logs, std::vector<LogEntry>& copied_logs) {
-    copied_logs.clear();
-    ThreadPool pool(std::thread::hardware_concurrency()); // Количество потоков = числу ядер процессора
-    std::vector<std::future<void>> futures;
-    std::mutex mtx;
-    copied_logs = logs;
-    if (currentState.isInfoHidden) {
-        futures.emplace_back(pool.enqueue([&]() {
-            std::lock_guard<std::mutex> lock(mtx);
-            copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-                [](const LogEntry& log) { return !log.details.find(L"Низк"); }),
-                copied_logs.end());
-            }));
-    }
-    if (currentState.isWarningsHidden) {
-        futures.emplace_back(pool.enqueue([&]() {
-			std::lock_guard<std::mutex> lock(mtx);
-			copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-				[](const LogEntry& log) { return !log.details.find(L"Средн"); }),
-				copied_logs.end());
-			}));
-    }
-    if (currentState.searchByProc) {
-        futures.emplace_back(pool.enqueue([&]() {
-			std::lock_guard<std::mutex> lock(mtx);
-			copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-				[currentState](const LogEntry& log) { return !log.process.find(currentState.procName); }),
-				copied_logs.end());
-			}));
-    }
-    if (currentState.searchByDate) {
-        futures.emplace_back(pool.enqueue([&]() {
-			std::lock_guard<std::mutex> lock(mtx);
-			copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
-				[currentState](const LogEntry& log) { return !(log.time.GetTime() <= currentState.dateTill.GetTime() && log.time.GetTime() >= currentState.dateFrom.GetTime()); }),
-				copied_logs.end());
-			}));
-    }
-	for (auto& future : futures) {
-        future.get();
-	}
+void clearInfoListInputs() {
+	cpl_l = 0;
+	cpl_m = 0;
+	cpl_h = 0;
 }
 
-void readFile(std::ifstream& file, std::vector<LogEntry>& logs) {
-    std::string line;
-    logs.reserve(20000);
-    ThreadPool pool(std::thread::hardware_concurrency()); // Количество потоков = числу ядер процессора
-    std::vector<std::future<void>> futures;
-    std::mutex mtx;
-    while (getline(file, line)) {
-        futures.emplace_back(pool.enqueue([&logs, &line, &mtx]() {
-            std::wstring utf16Line = UTF8ToUTF16(line);
-            auto vec = splitLine(utf16Line);
-            if (vec[3] != L"") {
-                LogEntry log;
-                log.PID = vec[0];
-                CTime time;
-                if (WStringToCTime(vec[1], time)) {
-                    log.time = time;
-                }
-                else {
-                    log.time = CTime::GetCurrentTime();
-                }
-                log.process = vec[2];
-                log.command = vec[3];
-                log.details = vec[4];
-                static std::mutex mtx;
-                std::lock_guard<std::mutex> lock(mtx);
-                logs.emplace_back(log);
-            }
-            }));
-        
-    };
-    for (auto& future : futures) {
-        future.get();
-    }
-    if (copied_logs.empty()) {
-        copied_logs.swap(logs);
-    }
+std::string WStoS(const std::wstring& wstr) {
+    if (wstr.empty()) return std::string();
+
+    // Определяем размер буфера для строки UTF-8
+    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), static_cast<int>(wstr.size()), nullptr, 0, nullptr, nullptr);
+    if (sizeNeeded <= 0) return std::string();
+
+    // Преобразуем UTF-16 в UTF-8
+    std::string utf8Str(sizeNeeded, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), static_cast<int>(wstr.size()), &utf8Str[0], sizeNeeded, nullptr, nullptr);
+
+    return utf8Str;
 }
+
 
 std::vector<std::wstring> splitLine(const std::wstring& line) {
     std::wstringstream splited(line);
     std::wstring token;
-    std::mutex mute;
     auto ssplited = splited.str();
     std::vector<std::wstring> result(5);
     splited >> result[0] >> result[1] >> token;
@@ -161,23 +48,92 @@ std::vector<std::wstring> splitLine(const std::wstring& line) {
             break;
         }
         else {
-            result[3] = L""; 
-            result[4] = L""; 
+            result[3] = L"";
+            result[4] = L"";
         }
     };
     if (result[3] == L"execve") {
         size_t start = ssplited.find(_T('"')) + 1;
-        size_t end = ssplited.find(_T(","), start);
+        size_t end = ssplited.find(_T(","), start) - 1;
         result[2] = ssplited.substr(start, end - start); // Добавление команды в результат
         processes[result[0]] = result[2]; // Добавление PID в список процессов
     }
     else {
-        result[2] = processes[result[0]]; // Добавление команды в результат, если нет процесса
+        result[2] = processes[result[0]];
     }
-
     return result;
 }
+void filterByParameters(const AppState currentState, const std::vector<LogEntry>& logs, std::vector<LogEntry>& copied_logs) {
 
+    if (currentState.isEverySame(recentState)) {
+        return;
+    }
+    else {
+        copied_logs = logs;
+        if (currentState.isInfoHidden) {
+            copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+                [](const LogEntry& log) { return !log.details.find(L"Низк"); }),
+                copied_logs.end());
+        }
+
+        if (currentState.isWarningsHidden) {
+            copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+                [](const LogEntry& log) { return !log.details.find(L"Средн"); }),
+                copied_logs.end());
+        }
+
+        if (currentState.searchByProc && !currentState.procName.empty()) {
+            copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+                [currentState](const LogEntry& log) {
+                    return log.process.find(currentState.procName) == std::wstring::npos;
+                }),
+                copied_logs.end());
+        }
+
+        if (currentState.searchByDate) {
+            copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+                [currentState](const LogEntry& log) {
+                    int logTimeInSeconds = log.time.GetHour() * 3600 + log.time.GetMinute() * 60 + log.time.GetSecond();
+                    int fromTimeInSeconds = currentState.dateFrom.GetHour() * 3600 + currentState.dateFrom.GetMinute() * 60 + currentState.dateFrom.GetSecond();
+                    int tillTimeInSeconds = currentState.dateTill.GetHour() * 3600 + currentState.dateTill.GetMinute() * 60 + currentState.dateTill.GetSecond();
+                    if (fromTimeInSeconds <= tillTimeInSeconds) {
+                        // Обычный случай: диапазон в пределах одного дня
+                        return logTimeInSeconds < fromTimeInSeconds || logTimeInSeconds > tillTimeInSeconds;
+                    }
+                    else {
+                        // Диапазон пересекает границу суток
+                        return logTimeInSeconds > tillTimeInSeconds && logTimeInSeconds < fromTimeInSeconds;
+                    }; }),
+                copied_logs.end());
+        }
+    }
+}
+void readFile(std::ifstream& file, std::vector<LogEntry>& logs) {
+    std::string line;
+    while (getline(file, line)) {
+        std::wstring utf16Line = UTF8ToUTF16(line);
+        auto vec = splitLine(utf16Line);
+        if (vec[3] != L"") {
+            LogEntry log;
+            log.PID = vec[0];
+            log.timeStr = vec[1];
+            CTime time;
+            if (WStringToCTime(vec[1], time)) {
+                log.time = time;
+            } else {
+                log.time = CTime::GetCurrentTime();
+            }
+            log.process = vec[2];
+            log.command = vec[3];
+            log.details = vec[4];
+            logs.emplace_back(log);
+        }
+    }
+
+    if (copied_logs.empty()) {
+        copied_logs = logs;
+    }
+}
 std::wstring UTF8ToUTF16(const std::string& utf8) {
     if (utf8.empty()) return std::wstring();
 
@@ -197,13 +153,11 @@ std::wstring UTF8ToUTF16(const std::string& utf8) {
 
     return utf16;
 }
-
-
 bool WStringToCTime(std::wstring& timeStr, CTime& outTime) {
-    int hours = 0, minutes = 0, seconds = 0;
+    int hours = 0, minutes = 0, seconds, ms = 0;
 
     // Попытка распарсить строку времени
-    if (swscanf_s(timeStr.c_str(), L"%d:%d:%d", &hours, &minutes, &seconds) != 3) {
+    if (swscanf_s(timeStr.c_str(), L"%d:%d:%d.%d", &hours, &minutes, &seconds, &ms) != 4) {
         return false;  // Ошибка парсинга
     }
 
@@ -224,4 +178,32 @@ bool WStringToCTime(std::wstring& timeStr, CTime& outTime) {
         e->Delete();  // Удаляем исключение
         return false;  // Некорректное время
     }
+}
+std::wstring CTimeToWString(const CTime& time) {
+    // Форматируем дату через CTime::Format()
+    CString formattedTime = time.Format(L"%T");
+
+    // Конвертируем CString в std::wstring
+    return std::wstring(formattedTime.GetString());
+}
+
+double calculateSuspicionPercentage(const int& low, const int& medium, const int& high) {
+    // Проверяем, есть ли данные для расчета
+    int total = high + medium + low;
+    if (total == 0) {
+        return 0.0; // Если нет данных, возвращаем 0%
+    }
+
+    // Весовые коэффициенты для каждого уровня подозрительности
+    const double highWeight = 1.0;   // Высокая подозрительность
+    const double mediumWeight = 0.5; // Средняя подозрительность
+    const double lowWeight = 0.2;    // Низкая подозрительность
+
+    // Рассчитываем общий "вес" подозрительности
+    double weightedSum = (high * highWeight) + (medium * mediumWeight) + (low * lowWeight);
+
+    // Рассчитываем процент подозрительности
+    double suspicionPercentage = (weightedSum / total) * 100.0;
+
+    return suspicionPercentage;
 }

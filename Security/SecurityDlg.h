@@ -31,7 +31,7 @@ public:
     afx_msg void OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult);
     afx_msg void OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult);
 
-private:
+public:
     CEdit show_log;
     CEdit edit_process;
     CButton check_warns;
@@ -44,6 +44,7 @@ private:
     CDateTimeCtrl date_till;
     std::vector<LogEntry> logs;
     AppState state;
+    CInfoList* m_pInfoList = nullptr;
 public:
     afx_msg void OnHideInfo();
     afx_msg void OnHideWarns();

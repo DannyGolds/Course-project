@@ -65,11 +65,7 @@ END_MESSAGE_MAP()
 
 BOOL CSecurityDlg::OnInitDialog()
 {
-    setlocale(LC_ALL, "RU");
     CDialogEx::OnInitDialog();
-    CFont LogFont;
-    LogFont.CreateFontW(16, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 0, 0, 0, DEFAULT_PITCH | FF_SWISS, _T("Montserrat"));
-    show_log.SetFont(&LogFont);
     show_log.SetWindowTextW(_T("Файл не выбран."));
 
     SetIcon(m_hIcon, TRUE);
@@ -118,12 +114,17 @@ void CSecurityDlg::OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CSecurityDlg::OnOpen()
 {
+
     CFileDialog fileDialog(TRUE, _T("strace.log"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Файлы журналирования |*.log;*.txt||"));
     if (fileDialog.DoModal() == IDOK)
     {
         logPath = fileDialog.GetPathName();
-        std::ifstream file(logPath, std::ios::in);
+        std::ifstream file(logPath);
         try {
+            if (file.is_open()) {
+                logs.clear();
+                copied_logs.clear();
+            }
                 show_log.SetWindowTextW(logPath);
                 readFile(file, logs);
                 file.close();
@@ -142,11 +143,15 @@ void CSecurityDlg::OnOpen()
 
 void CSecurityDlg::OnApplyFilter()
 {
+    if (state.isEverySame(recentState)) {
+        return;
+    }
     filterByParameters(state, logs, copied_logs);
 }
 
 void CSecurityDlg::OnSearchingByDate()
-{
+{   
+	recentState.searchByDate = state.searchByDate;
     state.searchByDate = (check_date.GetCheck() == BST_CHECKED);
     setCheckState(check_date, date_from);
     setCheckState(check_date, date_till);
@@ -154,6 +159,7 @@ void CSecurityDlg::OnSearchingByDate()
 
 void CSecurityDlg::OnSearchingByProc()
 {
+    recentState.searchByProc = state.searchByProc;
     state.searchByProc = (check_process.GetCheck() == BST_CHECKED);
     setCheckState(check_process, edit_process);
 }
@@ -162,7 +168,7 @@ void CSecurityDlg::OnChoiceDateFrom(NMHDR* pNMHDR, LRESULT* pResult)
 {
     LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
     *pResult = 0;
-
+    recentState.dateFrom = state.dateFrom;
     CTime time;
     date_from.GetTime(time);
     state.dateFrom = time;
@@ -172,7 +178,7 @@ void CSecurityDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
 {
     LPNMDATETIMECHANGE pDTChange = reinterpret_cast<LPNMDATETIMECHANGE>(pNMHDR);
     *pResult = 0;
-
+	recentState.dateTill = state.dateTill;
     CTime time;
     date_till.GetTime(time);
     state.dateTill = time;
@@ -180,6 +186,7 @@ void CSecurityDlg::OnChoiceDateTill(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CSecurityDlg::OnChangeProcName()
 {
+	recentState.procName = state.procName;
     CString str;
     edit_process.GetWindowTextW(str);
     state.procName = std::wstring(str.GetString());
@@ -187,10 +194,12 @@ void CSecurityDlg::OnChangeProcName()
 
 void CSecurityDlg::OnHideInfo()
 {
+	recentState.isInfoHidden = state.isInfoHidden;
     state.isInfoHidden = (check_info.GetCheck() == BST_CHECKED);
 }
 
 void CSecurityDlg::OnHideWarns() {
+	recentState.isWarningsHidden = state.isWarningsHidden;
     state.isWarningsHidden = (check_warns.GetCheck() == BST_CHECKED);
 }
 
@@ -201,21 +210,38 @@ void setCheckState(CButton& checkBox, CWnd& elem)
 
 void CSecurityDlg::OnFullCheck()
 {
-    CInfoList list;
-    list.DoModal();
+    if (m_pInfoList)
+    {
+        m_pInfoList->DestroyWindow(); // Уничтожаем старое окно
+        delete m_pInfoList;          // Удаляем объект
+        m_pInfoList = nullptr;
+    }
+
+    m_pInfoList = new CInfoList();
+    m_pInfoList->Create(IDD_DIALOG1, nullptr);
+    m_pInfoList->ShowWindow(SW_SHOW);
+    clearInfoListInputs();
 }
 
 void CSecurityDlg::OnSave()
 {
-    CFileDialog fileDialog(FALSE, NULL, L"Конфигурация системы.log");
+    CFileDialog fileDialog(FALSE, NULL, L"NotOfS.log");
     if (fileDialog.DoModal() == IDOK)
     {
         auto logToSave = fileDialog.GetPathName();
-        std::ofstream fileToSave(logToSave, std::ios::app);
+        std::ofstream fileToSave(logToSave);
         if (fileToSave.is_open())
         {
-            std::string data = "Логи загружены!";
-            fileToSave << data;
+			fileToSave << "PID TIME PROCESS COMMAND DETAILS" << std::endl;
+            for (auto& log : logs) {
+                std::string pid = WStoS(log.PID);
+                std::string time = WStoS(log.timeStr);
+                std::string proc = WStoS(log.process);
+                std::string command = WStoS(log.command);
+                std::string details = WStoS(log.details);
+                std::string data = pid + " " + time + " " + "\"" + proc + "\"" + " " + command + " " + "\"" + details + "\"";
+                fileToSave << data << std::endl;
+            };
         }
         else
         {
@@ -224,4 +250,3 @@ void CSecurityDlg::OnSave()
         fileToSave.close();
     }
 }
-

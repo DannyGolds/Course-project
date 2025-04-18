@@ -6,6 +6,7 @@
 struct LogEntry {
     std::wstring PID;
     CTime time;
+	std::wstring timeStr;
     std::wstring process;
     std::wstring command;
     std::wstring details;
@@ -21,4 +22,9 @@ struct AppState {
 	bool searchByDate;
 	CTime dateFrom;
 	CTime dateTill;
+public:
+	bool isEverySame(AppState& state) const {
+		return isLogsLoaded == state.isLogsLoaded && isWarningsHidden == state.isWarningsHidden && isInfoHidden == state.isWarningsHidden &&
+			searchByProc == state.searchByProc && state.dateFrom == dateFrom && state.dateTill == dateTill && state.searchByDate == searchByDate && procName == state.procName;
+	}
 };
