@@ -25,9 +25,11 @@ protected:
 public:
     CListCtrl main_list;
     afx_msg void FillList(const std::vector<LogEntry>&, const std::vector<LogEntry>&); 
-    afx_msg void ShowMessageRes();// Метод для заполнения списка данными
+    afx_msg void ShowMessageRes(const int& cpl_l, const int& cpl_m, const int& cpl_h);// Метод для заполнения списка данными
     afx_msg void OnLvnItemchangedList3(NMHDR* pNMHDR, LRESULT* pResult);
     CString cpl_l_edit;
     CString cpl_m_edit;
     CString cpl_h_edit;
+    afx_msg void OnShowSummary();
+    afx_msg void OnListClose();
 };

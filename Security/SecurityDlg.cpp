@@ -43,6 +43,10 @@ void CSecurityDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_DATETIMEPICKER1, date_till);
     DDX_Control(pDX, IDC_BUTTON3, btn_check);
     DDX_Control(pDX, IDC_BUTTON1, btn_apply);
+    DDX_Control(pDX, IDC_EDIT8, PID_edit);
+    DDX_Control(pDX, IDC_EDIT7, command_edit);
+    DDX_Control(pDX, IDC_CHECK5, pid_check);
+    DDX_Control(pDX, IDC_CHECK6, command_check);
 }
 
 BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
@@ -61,6 +65,11 @@ BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
     ON_BN_CLICKED(IDC_CHECK4, &CSecurityDlg::OnHideInfo)
     ON_BN_CLICKED(IDC_CHECK3, &CSecurityDlg::OnHideWarns)
     ON_COMMAND(ID_32778, &CSecurityDlg::OnSave)
+    ON_BN_CLICKED(IDC_CHECK5, &CSecurityDlg::OnBnClickedCheck5)
+    ON_BN_CLICKED(IDC_CHECK6, &CSecurityDlg::OnBnClickedCheck6)
+    ON_EN_CHANGE(IDC_EDIT8, &CSecurityDlg::OnEnChangeEdit8)
+    ON_EN_CHANGE(IDC_EDIT7, &CSecurityDlg::OnEnChangeEdit7)
+    ON_COMMAND(ID_32779, &CSecurityDlg::OnSaveFiltered)
 END_MESSAGE_MAP()
 
 BOOL CSecurityDlg::OnInitDialog()
@@ -70,10 +79,6 @@ BOOL CSecurityDlg::OnInitDialog()
 
     SetIcon(m_hIcon, TRUE);
     SetIcon(m_hIcon, FALSE);
-    date_from.EnableWindow(FALSE);
-    date_till.EnableWindow(FALSE);
-    edit_process.EnableWindow(FALSE);
-
     return TRUE;
 }
 
@@ -134,12 +139,16 @@ void CSecurityDlg::OnOpen()
                 check_process.EnableWindow(TRUE);
                 check_warns.EnableWindow(TRUE);
                 btn_apply.EnableWindow(TRUE);
+				pid_check.EnableWindow(TRUE);
+                command_check.EnableWindow(TRUE);
         }
         catch(...) {
             AfxMessageBox(_T("Ошибка открытия файла"));
         }
     }
 }
+
+
 
 void CSecurityDlg::OnApplyFilter()
 {
@@ -249,4 +258,62 @@ void CSecurityDlg::OnSave()
         }
         fileToSave.close();
     }
+}
+
+void CSecurityDlg::OnSaveFiltered()
+{
+    CFileDialog fileDialog(FALSE, NULL, L"NotOfS_filtered.log");
+    if (fileDialog.DoModal() == IDOK)
+    {
+        auto logToSave = fileDialog.GetPathName();
+        std::ofstream fileToSave(logToSave);
+        if (fileToSave.is_open())
+        {
+            fileToSave << "PID TIME PROCESS COMMAND DETAILS" << std::endl;
+            for (auto& log : copied_logs) {
+                std::string pid = WStoS(log.PID);
+                std::string time = WStoS(log.timeStr);
+                std::string proc = WStoS(log.process);
+                std::string command = WStoS(log.command);
+                std::string details = WStoS(log.details);
+                std::string data = pid + " " + time + " " + "\"" + proc + "\"" + " " + command + " " + "\"" + details + "\"";
+                fileToSave << data << std::endl;
+            };
+        }
+        else
+        {
+            TRACE(_T("Не удалось создать файл для сохранения!"));
+        }
+        fileToSave.close();
+    }
+}
+
+void CSecurityDlg::OnBnClickedCheck5()//pid
+{
+    recentState.searchByPID = state.searchByPID;
+    state.searchByPID = (pid_check.GetCheck() == BST_CHECKED);
+    setCheckState(pid_check, PID_edit);
+}
+
+void CSecurityDlg::OnBnClickedCheck6()//command
+{
+    recentState.searchByCommand = state.searchByCommand;
+    state.searchByCommand = (command_check.GetCheck() == BST_CHECKED);
+    setCheckState(command_check, command_edit);
+}
+
+void CSecurityDlg::OnEnChangeEdit8()//pid
+{
+    recentState.PID = state.PID;
+    CString str;
+    PID_edit.GetWindowTextW(str);
+    state.PID = std::wstring(str.GetString());
+}
+
+void CSecurityDlg::OnEnChangeEdit7()//command
+{
+    recentState.commandName = state.commandName;
+    CString str;
+    command_edit.GetWindowTextW(str);
+    state.commandName = std::wstring(str.GetString());
 }

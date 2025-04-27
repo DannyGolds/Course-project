@@ -41,7 +41,9 @@ std::vector<std::wstring> splitLine(const std::wstring& line) {
     auto ssplited = splited.str();
     std::vector<std::wstring> result(5);
     splited >> result[0] >> result[1] >> token;
-    for (auto const& [cmd, lev] : commandRisk) {
+    for (auto const& pair : commandRisk) {
+		std::wstring cmd = pair.first;
+		std::wstring lev = pair.second;
         if (token.find(cmd) != std::wstring::npos) {
             result[3] = cmd;
             result[4] = lev; // Добавление уровня подозрительности в результат
@@ -52,7 +54,7 @@ std::vector<std::wstring> splitLine(const std::wstring& line) {
             result[4] = L"";
         }
     };
-    if (result[3] == L"execve") {
+    if (result[3] == L"execve" || result[3] == L"execveat" || result[3] == L"fork" || result[3] == L"vfork") {
         size_t start = ssplited.find(_T('"')) + 1;
         size_t end = ssplited.find(_T(","), start) - 1;
         result[2] = ssplited.substr(start, end - start); // Добавление команды в результат
@@ -61,6 +63,9 @@ std::vector<std::wstring> splitLine(const std::wstring& line) {
     else {
         result[2] = processes[result[0]];
     }
+	if (result[2].empty()) {
+		result[2] = L"Неизвестный процесс / ID процесса объявлено раньше вызова процесса. (Попробуйте найти объявление процесса с данным ID ниже.)";
+	}
     return result;
 }
 void filterByParameters(const AppState currentState, const std::vector<LogEntry>& logs, std::vector<LogEntry>& copied_logs) {
@@ -86,6 +91,20 @@ void filterByParameters(const AppState currentState, const std::vector<LogEntry>
             copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
                 [currentState](const LogEntry& log) {
                     return log.process.find(currentState.procName) == std::wstring::npos;
+                }),
+                copied_logs.end());
+        }
+        if (currentState.searchByPID && !currentState.PID.empty()) {
+            copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+                [currentState](const LogEntry& log) {
+                    return !(log.PID == currentState.PID);
+                }),
+                copied_logs.end());
+        }
+        if (currentState.searchByCommand && !currentState.commandName.empty()) {
+            copied_logs.erase(std::remove_if(copied_logs.begin(), copied_logs.end(),
+                [currentState](const LogEntry& log) {
+					return log.command.find(currentState.commandName) == std::wstring::npos;
                 }),
                 copied_logs.end());
         }

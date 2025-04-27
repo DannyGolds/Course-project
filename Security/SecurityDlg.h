@@ -7,7 +7,7 @@ class CSecurityDlg : public CDialogEx
 {
 public:
     CSecurityDlg(CWnd* pParent = nullptr);
-
+    enum { IDD = IDD_SECURITY_DIALOG};
 protected:
     virtual void DoDataExchange(CDataExchange* pDX);
 
@@ -49,4 +49,13 @@ public:
     afx_msg void OnHideInfo();
     afx_msg void OnHideWarns();
     afx_msg void OnSave();
+    CEdit PID_edit;
+    CEdit command_edit;
+    afx_msg void OnBnClickedCheck5();
+    afx_msg void OnBnClickedCheck6();
+    afx_msg void OnEnChangeEdit8();
+    afx_msg void OnEnChangeEdit7();
+    CButton pid_check;
+    CButton command_check;
+    afx_msg void OnSaveFiltered();
 };

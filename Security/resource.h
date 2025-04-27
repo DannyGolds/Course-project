@@ -23,9 +23,13 @@
 #define IDC_CHECK4                      1007
 #define IDC_EDIT6                       1007
 #define IDC_BUTTON2                     1008
+#define IDC_CHECK5                      1008
 #define IDC_BUTTON3                     1009
 #define IDC_DATETIMEPICKER1             1010
 #define IDC_DATETIMEPICKER2             1011
+#define IDC_EDIT7                       1012
+#define IDC_CHECK6                      1013
+#define IDC_EDIT8                       1014
 #define IDC_LIST3                       1015
 #define MY_IDOK                         1019
 #define MY_IDCANCEL                     1020
@@ -37,13 +41,14 @@
 #define ID_32776                        32776
 #define ID_Open                         32777
 #define ID_32778                        32778
+#define ID_32779                        32779
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        143
-#define _APS_NEXT_COMMAND_VALUE         32779
+#define _APS_NEXT_COMMAND_VALUE         32780
 #define _APS_NEXT_CONTROL_VALUE         1022
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

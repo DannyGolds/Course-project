@@ -32,6 +32,8 @@ void CInfoList::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CInfoList, CDialogEx)
     ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST3, &CInfoList::OnLvnItemchangedList3)
+	ON_BN_CLICKED(IDC_BUTTON1, &CInfoList::OnShowSummary)
+	ON_BN_CLICKED(IDC_BUTTON2, &CInfoList::OnListClose)
 END_MESSAGE_MAP()
 
 std::wstring CTimeToWString(const CTime&);
@@ -49,7 +51,6 @@ BOOL CInfoList::OnInitDialog()
     main_list.InsertColumn(3, _T("Имя команды"), LVCFMT_LEFT, 120);
     main_list.InsertColumn(4, _T("Уровень подозрительности"), LVCFMT_LEFT, 260);
     this->FillList(copied_logs, logs);
-	this->ShowMessageRes();
     // Заполняем список данными из m_logs
     return TRUE;  // return TRUE unless you set the focus to a control
 }
@@ -95,10 +96,20 @@ void CInfoList::FillList(const std::vector<LogEntry>& lg, const std::vector<LogE
 	UpdateData(FALSE); // Обновляем отображение данных в диалоговом окне
 }
 
-void CInfoList::ShowMessageRes()
+void CInfoList::OnShowSummary()
 {
+	this->ShowMessageRes(std::stoi(cpl_l_edit.GetString()), std::stoi(cpl_m_edit.GetString()), std::stoi(cpl_h_edit.GetString()));
+}
+
+void CInfoList::ShowMessageRes(const int& cpl_l, const int& cpl_m, const int& cpl_h ) {
 	auto resOfWork = calculateSuspicionPercentage(cpl_l, cpl_m, cpl_h);
 	CString message;
 	message.Format(L"При данных настройках действия подозрительны на %.2f%%", resOfWork);
 	AfxMessageBox(message);
+}
+
+
+void CInfoList::OnListClose()
+{
+	this->DestroyWindow();
 }

@@ -21,10 +21,14 @@ struct AppState {
 	std::wstring procName;
 	bool searchByDate;
 	CTime dateFrom;
+	bool searchByCommand;
+	bool searchByPID;
+	std::wstring commandName;
+	std::wstring PID;
 	CTime dateTill;
 public:
 	bool isEverySame(AppState& state) const {
 		return isLogsLoaded == state.isLogsLoaded && isWarningsHidden == state.isWarningsHidden && isInfoHidden == state.isWarningsHidden &&
-			searchByProc == state.searchByProc && state.dateFrom == dateFrom && state.dateTill == dateTill && state.searchByDate == searchByDate && procName == state.procName;
+			searchByProc == state.searchByProc && state.dateFrom == dateFrom && state.dateTill == dateTill && state.searchByDate == searchByDate && procName == state.procName &&searchByCommand == state.searchByCommand && searchByPID == state.searchByPID && commandName == state.commandName && PID == state.PID;
 	}
 };
