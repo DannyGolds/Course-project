@@ -72,11 +72,13 @@ BEGIN_MESSAGE_MAP(CSecurityDlg, CDialogEx)
     ON_COMMAND(ID_32779, &CSecurityDlg::OnSaveFiltered)
 END_MESSAGE_MAP()
 
+
 BOOL CSecurityDlg::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
     show_log.SetWindowTextW(_T("Файл не выбран."));
-
+    if (takePath != L"") { OnOpen();
+    };
     SetIcon(m_hIcon, TRUE);
     SetIcon(m_hIcon, FALSE);
     return TRUE;
@@ -119,35 +121,50 @@ void CSecurityDlg::OnNMCustomdrawProgress1(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CSecurityDlg::OnOpen()
 {
-
-    CFileDialog fileDialog(TRUE, _T("strace.log"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Файлы журналирования |*.log;*.txt||"));
-    if (fileDialog.DoModal() == IDOK)
-    {
-        logPath = fileDialog.GetPathName();
-        std::ifstream file(logPath);
-        try {
-            if (file.is_open()) {
-                logs.clear();
-                copied_logs.clear();
-            }
-                show_log.SetWindowTextW(logPath);
-                readFile(file, logs);
-                file.close();
-                btn_check.EnableWindow(TRUE);
-                check_date.EnableWindow(TRUE);
-                check_info.EnableWindow(TRUE);
-                check_process.EnableWindow(TRUE);
-                check_warns.EnableWindow(TRUE);
-                btn_apply.EnableWindow(TRUE);
-				pid_check.EnableWindow(TRUE);
-                command_check.EnableWindow(TRUE);
-        }
-        catch(...) {
-            AfxMessageBox(_T("Ошибка открытия файла"));
+    // Если takePath задан, используем его для открытия файла
+    if (!takePath.IsEmpty()) {
+        logPath = takePath; // Устанавливаем путь из командной строки
+    }
+    else {
+        // Если takePath не задан, открываем диалоговое окно
+        CFileDialog fileDialog(TRUE, _T("strace.log"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Файлы журналирования |*.log;*.txt||"));
+        if (fileDialog.DoModal() == IDOK) {
+            logPath = fileDialog.GetPathName(); // Получаем путь из диалогового окна
         }
     }
-}
 
+    // Открываем файл по указанному пути
+    std::ifstream file(logPath);
+    AfxMessageBox(logPath);
+    try {
+        if (file.is_open()) {
+            logs.clear();
+            copied_logs.clear();
+            show_log.SetWindowTextW(logPath); // Отображаем путь в интерфейсе
+            readFile(file, logs); // Читаем файл
+            file.close();
+            if (!savePath.IsEmpty()) {
+                OnSave();
+            }
+
+            // Активируем элементы управления
+            btn_check.EnableWindow(TRUE);
+            check_date.EnableWindow(TRUE);
+            check_info.EnableWindow(TRUE);
+            check_process.EnableWindow(TRUE);
+            check_warns.EnableWindow(TRUE);
+            btn_apply.EnableWindow(TRUE);
+            pid_check.EnableWindow(TRUE);
+            command_check.EnableWindow(TRUE);
+        }
+        else {
+            AfxMessageBox(_T("Не удалось открыть файл."));
+        }
+    }
+    catch (...) {
+        AfxMessageBox(_T("Ошибка при чтении файла."));
+    }
+}
 
 
 void CSecurityDlg::OnApplyFilter()
@@ -234,36 +251,48 @@ void CSecurityDlg::OnFullCheck()
 
 void CSecurityDlg::OnSave()
 {
-    CFileDialog fileDialog(FALSE, NULL, L"NotOfS.log");
-    if (fileDialog.DoModal() == IDOK)
-    {
-        auto logToSave = fileDialog.GetPathName();
-        std::ofstream fileToSave(logToSave);
-        if (fileToSave.is_open())
-        {
-			fileToSave << "PID TIME PROCESS COMMAND DETAILS" << std::endl;
-            for (auto& log : logs) {
-                std::string pid = WStoS(log.PID);
-                std::string time = WStoS(log.timeStr);
-                std::string proc = WStoS(log.process);
-                std::string command = WStoS(log.command);
-                std::string details = WStoS(log.details);
-                std::string data = pid + " " + time + " " + "\"" + proc + "\"" + " " + command + " " + "\"" + details + "\"";
-                fileToSave << data << std::endl;
-            };
+    CString logToSave;
+    // Если savePath задан, используем его для сохранения файла
+    if (!savePath.IsEmpty()) {
+        logToSave = savePath;
+        AfxMessageBox(L"Файлы трассировки были приняты, обработаны и сохранены по указанному пути!");
+    }
+    else {
+        // Если savePath не задан, открываем диалоговое окно
+        CFileDialog fileDialog(FALSE, NULL, L"NotOfS.log", OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Лог-файлы (*.log)|*.log|Все файлы (*.*)|*.*||"));
+        if (fileDialog.DoModal() == IDOK) {
+            logToSave = fileDialog.GetPathName();
         }
-        else
-        {
-            TRACE(_T("Не удалось создать файл для сохранения!"));
+        else {
+            return; // Если пользователь закрыл диалоговое окно, выходим из метода
+        }
+    }
+    // Сохраняем лог в указанный файл
+    std::ofstream fileToSave(logToSave);
+    if (fileToSave.is_open()) {
+        fileToSave << "PID TIME PROCESS COMMAND DETAILS" << std::endl;
+        for (auto& log : logs) {
+            std::string pid = WStoS(log.PID);
+            std::string time = WStoS(log.timeStr);
+            std::string proc = WStoS(log.process);
+            std::string command = WStoS(log.command);
+            std::string details = WStoS(log.details);
+            std::string data = pid + " " + time + " " + "\"" + proc + "\"" + " " + command + " " + "\"" + details + "\"";
+            fileToSave << data << std::endl;
         }
         fileToSave.close();
     }
+    else {
+        AfxMessageBox(_T("Не удалось создать файл для сохранения!"));
+    }
 }
+
 
 void CSecurityDlg::OnSaveFiltered()
 {
     CFileDialog fileDialog(FALSE, NULL, L"NotOfS_filtered.log");
-    if (fileDialog.DoModal() == IDOK)
+    if (logPath == "") AfxMessageBox(_T("Файл не выбран!"));
+    else if (fileDialog.DoModal() == IDOK)
     {
         auto logToSave = fileDialog.GetPathName();
         std::ofstream fileToSave(logToSave);

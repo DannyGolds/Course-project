@@ -11,5 +11,7 @@ extern AppState state;
 extern int cpl_l;
 extern int cpl_m;
 extern int cpl_h;
+extern CString savePath;
+extern CString takePath;
 extern std::map<std::wstring, std::wstring> processes;
 extern std::map<std::wstring, std::wstring> commandRisk;

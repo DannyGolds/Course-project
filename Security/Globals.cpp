@@ -13,6 +13,8 @@ CString logPath;
 int cpl_l = 0;
 int cpl_m = 0;
 int cpl_h = 0;
+CString savePath = L"";
+CString takePath = L"";
 std::map<std::wstring, std::wstring> processes;
 std::map<std::wstring, std::wstring> commandRisk = {
     {L"execve", L"Высокая - запуск произвольных программ"},

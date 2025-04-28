@@ -6,6 +6,9 @@
 #include "framework.h"
 #include "Security.h"
 #include "SecurityDlg.h"
+#include "Globals.h"
+#include "sstream"
+#include "Utils.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -40,6 +43,39 @@ CSecurityApp theApp;
 
 BOOL CSecurityApp::InitInstance()
 {
+	CWinApp::InitInstance();
+
+	// Обработка аргументов командной строки
+	
+
+	for (int i = 1; i < __argc; ++i)
+	{
+		CString arg(__targv[i]);
+		for (int i = 1; i < __argc; ++i)
+		{
+			CString arg(__targv[i]);
+			std::wstring argument(arg.GetString());
+
+			// Проверяем, начинается ли аргумент с "--take="
+			if (argument.find(L"--take=") == 0)
+			{
+				takePath = CString(argument.substr(7).c_str()); // Извлекаем путь после "--take="
+				takePath.Trim(_T("\"")); // Удаляем кавычки
+			}
+			// Проверяем, начинается ли аргумент с "--save="
+			else if (argument.find(L"--save=") == 0)
+			{
+				savePath = CString(argument.substr(7).c_str()); // Извлекаем путь после "--save="
+				savePath.Trim(_T("\"")); // Удаляем кавычки
+			}
+		}
+	}
+
+	// Создание главного диалогового окна
+	CSecurityDlg dlg;
+	m_pMainWnd = &dlg;
+
+	INT_PTR nResponse = dlg.DoModal();
 	// InitCommonControlsEx() требуется для Windows XP, если манифест
 	// приложения использует ComCtl32.dll версии 6 или более поздней версии для включения
 	// стилей отображения.  В противном случае будет возникать сбой при создании любого окна.
@@ -49,8 +85,6 @@ BOOL CSecurityApp::InitInstance()
 	// в вашем приложении.
 	InitCtrls.dwICC = ICC_WIN95_CLASSES;
 	InitCommonControlsEx(&InitCtrls);
-
-	CWinApp::InitInstance();
 
 
 	AfxEnableControlContainer();
@@ -70,10 +104,6 @@ BOOL CSecurityApp::InitInstance()
 	// TODO: следует изменить эту строку на что-нибудь подходящее,
 	// например на название организации
 	SetRegistryKey(_T("Локальные приложения, созданные с помощью мастера приложений"));
-
-	CSecurityDlg dlg;
-	m_pMainWnd = &dlg;
-	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)
 	{
 		// TODO: Введите код для обработки закрытия диалогового окна
